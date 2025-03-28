@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Image from "next/image"
-import { Play, Music, Pause, Volume2, VolumeX, X } from "lucide-react"
+import { Play, Music, Pause, Volume2, VolumeX, X, Square } from "lucide-react"
 import { motion } from "framer-motion"
 
 interface SongCardProps {
@@ -32,12 +32,14 @@ export function SongCard({
   const [isMuted, setIsMuted] = useState(false)
   const [localPlayState, setLocalPlayState] = useState(isPlaying)
   const [isStopped, setIsStopped] = useState(false)
+  const [isCanceled, setIsCanceled] = useState(false)
   
   // Update local state when prop changes
   useEffect(() => {
     setLocalPlayState(isPlaying)
     if (isPlaying) {
       setIsStopped(false)
+      setIsCanceled(false)
     }
   }, [isPlaying])
 
@@ -48,6 +50,13 @@ export function SongCard({
   
   const handlePlayPause = (e: React.MouseEvent) => {
     e.stopPropagation()
+    if (isCanceled) {
+      setIsCanceled(false)
+      setIsStopped(false)
+      onPlay()
+      setLocalPlayState(true)
+      return
+    }
     if (localPlayState) {
       onStop?.()
       setLocalPlayState(false)
@@ -63,6 +72,16 @@ export function SongCard({
     onStop?.()
     setLocalPlayState(false)
     setIsStopped(true)
+    setIsCanceled(false)
+    setIsHovering(false)
+  }
+
+  const handleCancel = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    onStop?.()
+    setLocalPlayState(false)
+    setIsStopped(false)
+    setIsCanceled(true)
     setIsHovering(false)
   }
 
@@ -185,9 +204,9 @@ export function SongCard({
           <motion.div
             className="absolute inset-0 flex items-center justify-center gap-1 sm:gap-2"
             initial={{ opacity: 0 }}
-            animate={{ opacity: (isHovering || localPlayState) && !isStopped ? 1 : 0 }}
+            animate={{ opacity: (isHovering || localPlayState) && !isCanceled ? 1 : 0 }}
           >
-            {!isStopped && (
+            {!isCanceled && (
               <>
                 <motion.button
                   onClick={handlePlayPause}
@@ -216,6 +235,15 @@ export function SongCard({
                       whileTap={{ scale: 0.9 }}
                       aria-label="Stop playback"
                     >
+                      <Square className="h-4 w-4 sm:h-5 sm:w-5" />
+                    </motion.button>
+                    <motion.button
+                      onClick={handleCancel}
+                      className="neobrutalist-button !p-1.5 sm:!p-2 bg-white/90 hover:bg-[#FD6C6C]"
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      aria-label="Cancel playback"
+                    >
                       <X className="h-4 w-4 sm:h-5 sm:w-5" />
                     </motion.button>
                   </>
@@ -224,8 +252,8 @@ export function SongCard({
             )}
           </motion.div>
           
-          {/* Show play button on hover when stopped */}
-          {isStopped && isHovering && (
+          {/* Show play button on hover when canceled */}
+          {isCanceled && isHovering && (
             <motion.div
               className="absolute inset-0 flex items-center justify-center"
               initial={{ opacity: 0 }}

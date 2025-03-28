@@ -23,7 +23,11 @@ declare global {
   }
 }
 
-export const YouTubePlayer = forwardRef<{ togglePlay: () => void, stop: () => void }, YouTubePlayerProps>(({
+export const YouTubePlayer = forwardRef<{ 
+  togglePlay: () => void, 
+  stop: () => void,
+  cancel: () => void 
+}, YouTubePlayerProps>(({
   videoId,
   onEnded,
   autoplay = false,
@@ -39,17 +43,19 @@ export const YouTubePlayer = forwardRef<{ togglePlay: () => void, stop: () => vo
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
   const [isReady, setIsReady] = useState(false)
+  const [savedTime, setSavedTime] = useState(0)
   const playerRef = useRef<HTMLDivElement>(null)
   const timeUpdateInterval = useRef<NodeJS.Timeout | null>(null)
   const playerContainerId = useRef(`youtube-player-${Math.random().toString(36).substring(2, 9)}`)
 
-  // Expose togglePlay method through ref
+  // Expose methods through ref
   useImperativeHandle(ref, () => ({
     togglePlay: () => {
       if (player && isReady) {
         try {
           if (isPlaying) {
             player.pauseVideo()
+            setSavedTime(player.getCurrentTime())
           } else {
             player.playVideo()
           }
@@ -61,12 +67,25 @@ export const YouTubePlayer = forwardRef<{ togglePlay: () => void, stop: () => vo
     stop: () => {
       if (player && isReady) {
         try {
+          setSavedTime(player.getCurrentTime())
+          player.pauseVideo()
+          setIsPlaying(false)
+          onPlayStateChange?.(false)
+        } catch (error) {
+          console.error("Error stopping video:", error)
+        }
+      }
+    },
+    cancel: () => {
+      if (player && isReady) {
+        try {
+          setSavedTime(0)
           player.stopVideo()
           setIsPlaying(false)
           onPlayStateChange?.(false)
           setCurrentTime(0)
         } catch (error) {
-          console.error("Error stopping video:", error)
+          console.error("Error canceling video:", error)
         }
       }
     }
@@ -126,14 +145,20 @@ export const YouTubePlayer = forwardRef<{ togglePlay: () => void, stop: () => vo
   useEffect(() => {
     if (player && isReady && videoId) {
       try {
-        player.loadVideoById(videoId)
+        if (savedTime > 0) {
+          player.loadVideoById({
+            videoId: videoId,
+            startSeconds: savedTime
+          })
+        } else {
+          player.loadVideoById(videoId)
+        }
         if (isPlaying) {
           player.playVideo()
         } else {
           player.pauseVideo()
         }
-        // Reset time tracking
-        setCurrentTime(0)
+        setCurrentTime(savedTime)
         const newDuration = player.getDuration()
         setDuration(newDuration)
       } catch (error) {

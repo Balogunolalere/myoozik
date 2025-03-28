@@ -55,6 +55,13 @@ export default function PlaylistPage({ params, searchParams }: PageProps) {
     }
   }
 
+  const handleCancelSong = () => {
+    if (playerRef.current?.cancel) {
+      playerRef.current.cancel()
+      setCurrentSongIndex(null)
+    }
+  }
+
   const handleSongEnded = () => {
     if (currentSongIndex !== null && currentSongIndex < songs.length - 1) {
       setCurrentSongIndex(currentSongIndex + 1)
@@ -251,7 +258,7 @@ export default function PlaylistPage({ params, searchParams }: PageProps) {
                         thumbnailUrl={song.thumbnail_url}
                         duration={song.duration}
                         onPlay={() => handlePlaySong(index)}
-                        onStop={handleStopSong}
+                        onStop={currentSongIndex === index ? handleStopSong : handleCancelSong}
                         isPlaying={currentSongIndex === index && isPlayerPlaying}
                       />
                     </motion.div>
