@@ -55,7 +55,6 @@ export const YouTubePlayer = forwardRef<{
         try {
           if (isPlaying) {
             player.pauseVideo()
-            setSavedTime(player.getCurrentTime())
           } else {
             player.playVideo()
           }
@@ -67,10 +66,11 @@ export const YouTubePlayer = forwardRef<{
     stop: () => {
       if (player && isReady) {
         try {
-          setSavedTime(player.getCurrentTime())
+          player.seekTo(0)
           player.pauseVideo()
           setIsPlaying(false)
           onPlayStateChange?.(false)
+          setCurrentTime(0)
         } catch (error) {
           console.error("Error stopping video:", error)
         }
@@ -79,7 +79,7 @@ export const YouTubePlayer = forwardRef<{
     cancel: () => {
       if (player && isReady) {
         try {
-          setSavedTime(0)
+          player.seekTo(0)
           player.stopVideo()
           setIsPlaying(false)
           onPlayStateChange?.(false)
