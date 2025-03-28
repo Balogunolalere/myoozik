@@ -36,6 +36,15 @@ export function SongCard({
     setIsMuted(!isMuted)
   }
 
+  const handlePlayPause = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (isPlaying) {
+      onStop?.()
+    } else {
+      onPlay()
+    }
+  }
+
   const handleStop = (e: React.MouseEvent) => {
     e.stopPropagation()
     onStop?.()
@@ -43,7 +52,7 @@ export function SongCard({
 
   return (
     <motion.div
-      className="neobrutalist-card max-w-2xl mx-auto bg-gradient-to-r from-white to-gray-50"
+      className="neobrutalist-card w-full bg-gradient-to-r from-white to-gray-50 overflow-hidden"
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}
       whileHover={{
@@ -56,19 +65,19 @@ export function SongCard({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
     >
-      <div className="flex items-center gap-6 p-3">
+      <div className="flex items-center gap-2 sm:gap-6 p-2 sm:p-3">
         {/* Song Art and Info - Left Side */}
-        <div className="flex items-start gap-4 flex-1 min-w-0">
-          <div className="relative flex-shrink-0 w-[100px] h-[100px] border-4 border-black overflow-hidden rounded-lg">
+        <div className="flex items-start gap-2 sm:gap-4 flex-1 min-w-0">
+          <div className="relative flex-shrink-0 w-[60px] h-[60px] sm:w-[100px] sm:h-[100px] border-4 border-black overflow-hidden rounded-lg">
             {thumbnailUrl ? (
               <Image src={thumbnailUrl} alt={title} fill className="object-cover" />
             ) : (
               <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                <Music className="h-8 w-8 text-gray-400" />
+                <Music className="h-6 w-6 sm:h-8 sm:w-8 text-gray-400" />
               </div>
             )}
             {duration && (
-              <div className="absolute bottom-1 right-1 bg-black text-white text-xs px-1 py-0.5 rounded">
+              <div className="absolute bottom-1 right-1 bg-black text-white text-[10px] sm:text-xs px-1 py-0.5 rounded">
                 {duration}
               </div>
             )}
@@ -76,7 +85,7 @@ export function SongCard({
 
           <div className="flex flex-col min-w-0 flex-1">
             <h3 
-              className="font-bold text-lg break-words" 
+              className="font-bold text-base sm:text-lg break-words" 
               style={{ 
                 fontFamily: "var(--font-marker)",
                 display: '-webkit-box',
@@ -89,7 +98,7 @@ export function SongCard({
             </h3>
             {artist && (
               <p 
-                className="text-sm text-gray-600"
+                className="text-xs sm:text-sm text-gray-600"
                 style={{ 
                   fontFamily: "var(--font-indie)",
                   display: '-webkit-box',
@@ -108,9 +117,9 @@ export function SongCard({
                   {[1, 2, 3, 4, 5].map((i) => (
                     <motion.div
                       key={i}
-                      className="w-1.5 h-1.5 bg-[#FD6C6C] rounded-full"
+                      className="w-1 sm:w-1.5 h-1 sm:h-1.5 bg-[#FD6C6C] rounded-full"
                       animate={{
-                        height: [6, 16, 6],
+                        height: [4, 12, 4],
                       }}
                       transition={{
                         duration: 1,
@@ -127,13 +136,13 @@ export function SongCard({
         </div>
 
         {/* Vinyl Player - Right Side */}
-        <div className="relative flex-shrink-0 w-[100px] h-[100px]">
+        <div className="relative flex-shrink-0 w-[60px] h-[60px] sm:w-[100px] sm:h-[100px]">
           <motion.div 
             className="absolute inset-0"
             style={{
               backgroundImage: `radial-gradient(circle at center, #333 0%, #000 70%)`,
               borderRadius: '50%',
-              border: '8px solid #222',
+              border: '4px sm:8px solid #222',
             }}
             animate={{ rotate: isPlaying ? 360 : 0 }}
             transition={{ duration: 2, repeat: isPlaying ? Infinity : 0, ease: "linear" }}
@@ -145,51 +154,51 @@ export function SongCard({
                 className="absolute inset-0 rounded-full"
                 style={{
                   border: '1px solid rgba(255,255,255,0.1)',
-                  margin: `${(i + 1) * 8}px`,
+                  margin: `${(i + 1) * 4}px sm:${(i + 1) * 8}px`,
                 }}
               />
             ))}
             
             {/* Center label */}
-            <div className="absolute inset-[30%] rounded-full bg-[#FD6C6C] border-4 border-[#333] flex items-center justify-center overflow-hidden">
-              <div className="w-2 h-2 bg-black rounded-full" />
+            <div className="absolute inset-[30%] rounded-full bg-[#FD6C6C] border-2 sm:border-4 border-[#333] flex items-center justify-center overflow-hidden">
+              <div className="w-1 h-1 sm:w-2 sm:h-2 bg-black rounded-full" />
             </div>
           </motion.div>
 
           {/* Control overlay */}
           <motion.div
-            className="absolute inset-0 flex items-center justify-center gap-2"
+            className="absolute inset-0 flex items-center justify-center gap-1 sm:gap-2"
             initial={{ opacity: 0 }}
             animate={{ opacity: isHovering || isPlaying ? 1 : 0 }}
           >
             <motion.button
-              onClick={onPlay}
-              className="neobrutalist-button !p-2 bg-white/90 hover:bg-[#FD6C6C]"
+              onClick={handlePlayPause}
+              className="neobrutalist-button !p-1.5 sm:!p-2 bg-white/90 hover:bg-[#FD6C6C]"
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
               aria-label={isPlaying ? "Pause song" : "Play song"}
             >
-              {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
+              {isPlaying ? <Pause className="h-4 w-4 sm:h-5 sm:w-5" /> : <Play className="h-4 w-4 sm:h-5 sm:w-5" />}
             </motion.button>
             {isPlaying && (
               <>
                 <motion.button
                   onClick={handleMute}
-                  className="neobrutalist-button !p-2 bg-white/90 hover:bg-[#FD6C6C]"
+                  className="neobrutalist-button !p-1.5 sm:!p-2 bg-white/90 hover:bg-[#FD6C6C]"
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
                   aria-label={isMuted ? "Unmute" : "Mute"}
                 >
-                  {isMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
+                  {isMuted ? <VolumeX className="h-4 w-4 sm:h-5 sm:w-5" /> : <Volume2 className="h-4 w-4 sm:h-5 sm:w-5" />}
                 </motion.button>
                 <motion.button
                   onClick={handleStop}
-                  className="neobrutalist-button !p-2 bg-white/90 hover:bg-[#FD6C6C]"
+                  className="neobrutalist-button !p-1.5 sm:!p-2 bg-white/90 hover:bg-[#FD6C6C]"
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
                   aria-label="Stop playback"
                 >
-                  <X className="h-5 w-5" />
+                  <X className="h-4 w-4 sm:h-5 sm:w-5" />
                 </motion.button>
               </>
             )}
