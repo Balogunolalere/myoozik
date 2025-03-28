@@ -31,10 +31,14 @@ export function SongCard({
   const [isHovering, setIsHovering] = useState(false)
   const [isMuted, setIsMuted] = useState(false)
   const [localPlayState, setLocalPlayState] = useState(isPlaying)
+  const [isStopped, setIsStopped] = useState(false)
   
   // Update local state when prop changes
   useEffect(() => {
     setLocalPlayState(isPlaying)
+    if (isPlaying) {
+      setIsStopped(false)
+    }
   }, [isPlaying])
 
   const handleMute = (e: React.MouseEvent) => {
@@ -48,6 +52,7 @@ export function SongCard({
       onStop?.()
       setLocalPlayState(false)
     } else {
+      setIsStopped(false)
       onPlay()
       setLocalPlayState(true)
     }
@@ -57,6 +62,8 @@ export function SongCard({
     e.stopPropagation()
     onStop?.()
     setLocalPlayState(false)
+    setIsStopped(true)
+    setIsHovering(false)
   }
 
   return (
@@ -178,40 +185,63 @@ export function SongCard({
           <motion.div
             className="absolute inset-0 flex items-center justify-center gap-1 sm:gap-2"
             initial={{ opacity: 0 }}
-            animate={{ opacity: isHovering || localPlayState ? 1 : 0 }}
+            animate={{ opacity: (isHovering || localPlayState) && !isStopped ? 1 : 0 }}
           >
-            <motion.button
-              onClick={handlePlayPause}
-              className="neobrutalist-button !p-1.5 sm:!p-2 bg-white/90 hover:bg-[#FD6C6C]"
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              aria-label={localPlayState ? "Pause song" : "Play song"}
-            >
-              {localPlayState ? <Pause className="h-4 w-4 sm:h-5 sm:w-5" /> : <Play className="h-4 w-4 sm:h-5 sm:w-5" />}
-            </motion.button>
-            {(localPlayState || isHovering) && (
+            {!isStopped && (
               <>
                 <motion.button
-                  onClick={handleMute}
+                  onClick={handlePlayPause}
                   className="neobrutalist-button !p-1.5 sm:!p-2 bg-white/90 hover:bg-[#FD6C6C]"
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
-                  aria-label={isMuted ? "Unmute" : "Mute"}
+                  aria-label={localPlayState ? "Pause song" : "Play song"}
                 >
-                  {isMuted ? <VolumeX className="h-4 w-4 sm:h-5 sm:w-5" /> : <Volume2 className="h-4 w-4 sm:h-5 sm:w-5" />}
+                  {localPlayState ? <Pause className="h-4 w-4 sm:h-5 sm:w-5" /> : <Play className="h-4 w-4 sm:h-5 sm:w-5" />}
                 </motion.button>
-                <motion.button
-                  onClick={handleStop}
-                  className="neobrutalist-button !p-1.5 sm:!p-2 bg-white/90 hover:bg-[#FD6C6C]"
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                  aria-label="Stop playback"
-                >
-                  <X className="h-4 w-4 sm:h-5 sm:w-5" />
-                </motion.button>
+                {(localPlayState || isHovering) && (
+                  <>
+                    <motion.button
+                      onClick={handleMute}
+                      className="neobrutalist-button !p-1.5 sm:!p-2 bg-white/90 hover:bg-[#FD6C6C]"
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      aria-label={isMuted ? "Unmute" : "Mute"}
+                    >
+                      {isMuted ? <VolumeX className="h-4 w-4 sm:h-5 sm:w-5" /> : <Volume2 className="h-4 w-4 sm:h-5 sm:w-5" />}
+                    </motion.button>
+                    <motion.button
+                      onClick={handleStop}
+                      className="neobrutalist-button !p-1.5 sm:!p-2 bg-white/90 hover:bg-[#FD6C6C]"
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      aria-label="Stop playback"
+                    >
+                      <X className="h-4 w-4 sm:h-5 sm:w-5" />
+                    </motion.button>
+                  </>
+                )}
               </>
             )}
           </motion.div>
+          
+          {/* Show play button on hover when stopped */}
+          {isStopped && isHovering && (
+            <motion.div
+              className="absolute inset-0 flex items-center justify-center"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+            >
+              <motion.button
+                onClick={handlePlayPause}
+                className="neobrutalist-button !p-1.5 sm:!p-2 bg-white/90 hover:bg-[#FD6C6C]"
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                aria-label="Play song"
+              >
+                <Play className="h-4 w-4 sm:h-5 sm:w-5" />
+              </motion.button>
+            </motion.div>
+          )}
         </div>
       </div>
     </motion.div>
