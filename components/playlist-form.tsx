@@ -102,9 +102,7 @@ export function PlaylistForm() {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
     >
-      <h2 className="text-2xl font-bold mb-4" style={{ fontFamily: "var(--font-marker)" }}>
-        Add YouTube Playlist
-      </h2>
+      
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
