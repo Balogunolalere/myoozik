@@ -8,16 +8,7 @@ import { YouTubePlayer } from "@/components/youtube-player"
 import { PlaylistRating } from "@/components/playlist-rating"
 import { PlaylistCommentSection } from "@/components/playlist-comment-section"
 import { createClientSupabaseClient } from "@/lib/supabase"
-import { Disc } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
-import {
-  FloatingIcons,
-  MarqueeText,
-  VinylRecord,
-  RetroPattern,
-  RetroWaves,
-  CassetteTape,
-} from "@/components/decorative-elements"
 
 interface PlaylistPageProps {
   params: {
@@ -38,7 +29,7 @@ interface Playlist {
   id: number
   youtube_playlist_id: string
   title: string
-  description?: string
+  description: string | null
   average_rating?: number
   total_ratings?: number
 }
@@ -69,6 +60,7 @@ export default function PlaylistPage({ params }: PlaylistPageProps) {
         .select("*")
         .eq("id", params.id)
         .single()
+        .returns<{ id: number; youtube_playlist_id: string; title: string; description: string | null }>()
 
       if (playlistError) throw playlistError
 
@@ -77,6 +69,7 @@ export default function PlaylistPage({ params }: PlaylistPageProps) {
         .from("playlist_ratings")
         .select("rating")
         .eq("playlist_id", params.id)
+        .returns<{ rating: number }[]>()
 
       if (ratingsError) throw ratingsError
 
@@ -86,11 +79,16 @@ export default function PlaylistPage({ params }: PlaylistPageProps) {
         averageRating = sum / ratingsData.length
       }
 
-      setPlaylist({
-        ...playlistData,
+      const playlist: Playlist = {
+        id: playlistData.id,
+        youtube_playlist_id: playlistData.youtube_playlist_id,
+        title: playlistData.title,
+        description: playlistData.description,
         average_rating: averageRating,
-        total_ratings: ratingsData ? ratingsData.length : 0,
-      })
+        total_ratings: ratingsData ? ratingsData.length : 0
+      }
+
+      setPlaylist(playlist)
 
       // Fetch songs
       const { data: songsData, error: songsError } = await supabase
@@ -105,6 +103,7 @@ export default function PlaylistPage({ params }: PlaylistPageProps) {
         `)
         .eq("playlist_id", params.id)
         .order("id", { ascending: true })
+        .returns<Song[]>()
 
       if (songsError) throw songsError
 
@@ -148,19 +147,11 @@ export default function PlaylistPage({ params }: PlaylistPageProps) {
 
   return (
     <div className="flex flex-col min-h-screen bg-amber-50">
-      {isMounted && <FloatingIcons />}
-      <RetroPattern />
       <Header />
-
-      <main className="flex-1 container mx-auto px-4 py-8">
+      <main className="flex-1 container mx-auto px-4 py-8 max-w-4xl">
         {isLoading ? (
           <div className="flex justify-center items-center py-20">
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
-            >
-              <Disc className="h-16 w-16 text-primary" />
-            </motion.div>
+            <div className="h-16 w-16 border-4 border-primary border-t-transparent rounded-full animate-spin" />
           </div>
         ) : error ? (
           <motion.div
@@ -179,16 +170,9 @@ export default function PlaylistPage({ params }: PlaylistPageProps) {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
             >
-              <div className="neobrutalist-container bg-gradient-to-r from-accent to-secondary relative overflow-hidden">
-                <RetroWaves className="absolute inset-0 opacity-20" />
-
-                <div className="absolute -top-6 -right-6 z-10">
-                  <VinylRecord size={100} />
-                </div>
-
+              <div className="neobrutalist-container bg-[#FD6C6C] relative overflow-hidden">
                 <div className="relative z-10">
                   <div className="flex flex-col md:flex-row md:items-center gap-4 mb-6">
-                    <CassetteTape className="w-24 h-16 md:w-32 md:h-20 flex-shrink-0" />
                     <div className="text-container">
                       <h1 className="text-3xl font-bold mb-2" style={{ fontFamily: "var(--font-marker)" }}>
                         {playlist?.title}
@@ -200,7 +184,6 @@ export default function PlaylistPage({ params }: PlaylistPageProps) {
                       )}
                     </div>
                   </div>
-
                   <div className="mt-4 bg-white/70 p-4 rounded-lg backdrop-blur-sm border-2 border-black">
                     <h3 className="text-xl font-bold mb-2" style={{ fontFamily: "var(--font-marker)" }}>
                       Rate this playlist
@@ -286,9 +269,6 @@ export default function PlaylistPage({ params }: PlaylistPageProps) {
           </>
         )}
       </main>
-
-      <MarqueeText text="RATE • COMMENT • SHARE • ENJOY" />
-
       <Footer />
     </div>
   )

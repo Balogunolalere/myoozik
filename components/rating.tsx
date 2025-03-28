@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { Star } from "lucide-react"
 import { createClientSupabaseClient } from "@/lib/supabase"
+import { motion } from "framer-motion"
 
 interface RatingProps {
   songId: number
@@ -19,20 +20,20 @@ export function Rating({
   averageRating = 0,
   onRatingSubmit,
 }: RatingProps) {
-  const [rating, setRating] = useState(initialRating)
+  const [rating, setRating] = useState(0)
   const [hover, setHover] = useState(0)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [hasRated, setHasRated] = useState(initialRating > 0)
-
+  const [hasRated, setHasRated] = useState(false)
   const supabase = createClientSupabaseClient()
 
   const handleRating = async (value: number) => {
     if (isSubmitting) return
-
     setIsSubmitting(true)
 
     try {
-      const { error } = await supabase.from("ratings").insert([{ song_id: songId, rating: value }])
+      const { error } = await supabase
+        .from("ratings")
+        .insert([{ song_id: songId, rating: value }])
 
       if (error) throw error
 
@@ -56,17 +57,17 @@ export function Rating({
           <button
             key={star}
             type="button"
-            disabled={hasRated}
+            disabled={isSubmitting || hasRated}
             onClick={() => handleRating(star)}
-            onMouseEnter={() => setHover(star)}
-            onMouseLeave={() => setHover(0)}
+            onMouseEnter={() => !hasRated && setHover(star)}
+            onMouseLeave={() => !hasRated && setHover(0)}
             className={`transition-transform ${hasRated ? "cursor-default" : "cursor-pointer hover:scale-110"}`}
             aria-label={`Rate ${star} stars`}
           >
             <Star
               size={24}
               className={`
-                ${(hover || rating) >= star ? "fill-yellow-400 text-yellow-400" : "text-gray-300"}
+                ${(hover || rating) >= star ? "fill-[#FD6C6C] text-[#FD6C6C]" : "text-gray-300"}
                 ${hasRated ? "opacity-80" : ""}
               `}
             />
@@ -84,7 +85,16 @@ export function Rating({
         </div>
       )}
 
-      {hasRated && <div className="text-sm text-green-600 mt-1">Thanks for rating!</div>}
+      {hasRated && (
+        <motion.div
+          className="text-sm text-green-600 mt-1"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          Thanks for rating!
+        </motion.div>
+      )}
     </div>
   )
 }

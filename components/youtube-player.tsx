@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { useState, useEffect, useRef } from "react"
-import { Play, Pause, SkipForward, SkipBack, Volume2, VolumeX, Disc } from "lucide-react"
+import { Play, Pause, SkipForward, SkipBack, Volume2, VolumeX } from "lucide-react"
 import { motion } from "framer-motion"
 
 interface YouTubePlayerProps {
@@ -174,25 +174,14 @@ export function YouTubePlayer({
 
   return (
     <motion.div
-      className="neobrutalist-container w-full relative overflow-hidden"
+      className="neobrutalist-container w-full bg-[#FD6C6C] relative overflow-hidden"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
     >
-      <div className="absolute -top-6 -right-6 z-10">
-        <motion.div
-          className="w-16 h-16 bg-accent rounded-full border-4 border-black flex items-center justify-center"
-          animate={{ rotate: [0, 360] }}
-          transition={{ duration: 20, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
-        >
-          <Disc className="h-8 w-8" />
-        </motion.div>
-      </div>
-
       <div ref={playerRef}>
         <div id={playerContainerId}></div>
       </div>
-
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-2">
           <input
@@ -207,7 +196,6 @@ export function YouTubePlayer({
             {formatTime(currentTime)} / {formatTime(duration)}
           </span>
         </div>
-
         <div className="flex justify-between items-center">
           <div className="flex gap-2">
             <motion.button
@@ -220,7 +208,6 @@ export function YouTubePlayer({
             >
               <SkipBack size={20} />
             </motion.button>
-
             <motion.button
               onClick={togglePlay}
               className="neobrutalist-button"
@@ -230,7 +217,6 @@ export function YouTubePlayer({
             >
               {isPlaying ? <Pause size={20} /> : <Play size={20} />}
             </motion.button>
-
             <motion.button
               onClick={onNext}
               className="neobrutalist-button"
@@ -241,7 +227,6 @@ export function YouTubePlayer({
             >
               <SkipForward size={20} />
             </motion.button>
-
             <motion.button
               onClick={toggleMute}
               className="neobrutalist-button"

@@ -43,6 +43,7 @@ export function PlaylistCommentSection({ playlistId }: PlaylistCommentSectionPro
         .select("*")
         .eq("playlist_id", playlistId)
         .order("created_at", { ascending: false })
+        .returns<Comment[]>()
 
       if (error) throw error
 
@@ -97,7 +98,7 @@ export function PlaylistCommentSection({ playlistId }: PlaylistCommentSectionPro
 
   return (
     <motion.div
-      className="neobrutalist-container w-full bg-gradient-to-r from-secondary/30 to-accent/30"
+      className="neobrutalist-container w-full bg-[#FD6C6C]"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
@@ -143,13 +144,7 @@ export function PlaylistCommentSection({ playlistId }: PlaylistCommentSectionPro
       <div className="space-y-4">
         {isLoading ? (
           <div className="text-center py-4">
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
-              className="inline-block"
-            >
-              <MessageSquare className="h-8 w-8 text-primary" />
-            </motion.div>
+            <div className="h-8 w-8 border-4 border-black border-t-transparent rounded-full animate-spin" />
             <p className="mt-2">Loading comments...</p>
           </div>
         ) : comments.length === 0 ? (
@@ -161,7 +156,7 @@ export function PlaylistCommentSection({ playlistId }: PlaylistCommentSectionPro
             {comments.map((comment, index) => (
               <motion.div
                 key={comment.id}
-                className="border-4 border-black p-3 bg-white/80 backdrop-blur-sm"
+                className="border-4 border-black p-3 bg-white"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}

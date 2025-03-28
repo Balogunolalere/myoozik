@@ -72,7 +72,6 @@
   }
   body {
     @apply bg-background text-foreground;
-    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
   }
 }
 
@@ -96,159 +95,15 @@
            hover:translate-x-1 hover:translate-y-1 hover:shadow-none relative overflow-hidden;
   }
 
-  .indie-pattern {
-    @apply relative;
-  }
-
-  .indie-pattern::before {
-    content: "";
-    @apply absolute inset-0 opacity-5 pointer-events-none;
-    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-  }
-
-  .indie-dots {
-    @apply relative;
-  }
-
-  .indie-dots::before {
-    content: "";
-    @apply absolute inset-0 opacity-5 pointer-events-none;
-    background-image: radial-gradient(#000 1px, transparent 1px);
-    background-size: 20px 20px;
-  }
-
-  .indie-zigzag {
-    position: relative;
-  }
-
-  .indie-zigzag::after {
-    content: "";
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 8px;
-    background: linear-gradient(45deg, transparent 33.333%, #000 33.333%, #000 66.667%, transparent 66.667%),
-      linear-gradient(-45deg, transparent 33.333%, #000 33.333%, #000 66.667%, transparent 66.667%);
-    background-size: 16px 16px;
-    background-position: 0 -4px;
-  }
-
-  .marquee-container {
-    @apply overflow-hidden whitespace-nowrap;
-  }
-
-  .marquee-content {
-    @apply inline-block animate-marquee;
-  }
-
-  .vinyl-record {
-    @apply rounded-full bg-black relative overflow-hidden animate-spin;
-  }
-
-  .vinyl-record::after {
-    content: "";
-    @apply absolute rounded-full bg-primary w-1/3 h-1/3 top-1/3 left-1/3;
-  }
-
-  .cassette-tape {
-    @apply relative border-4 border-black bg-secondary aspect-[3/2] overflow-hidden;
-  }
-
-  .cassette-tape::before {
-    content: "";
-    @apply absolute w-1/2 h-1/4 border-2 border-black rounded-full top-1/3 left-1/4;
-  }
-
-  .cassette-tape::after {
-    content: "";
-    @apply absolute w-1/4 h-1/6 bg-black bottom-1/6 left-3/8;
-  }
-
-  .doodle-border {
-    @apply relative;
-  }
-
-  .doodle-border::after {
-    content: "";
-    @apply absolute inset-0 border-4 border-black;
-    mask-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0,0 C30,10 70,10 100,0 C90,30 90,70 100,100 C70,90 30,90 0,100 C10,70 10,30 0,0' fill='none' stroke='black' stroke-width='2'/%3E%3C/svg%3E");
-    mask-size: 100% 100%;
-  }
-
-  .text-shadow-retro {
-    text-shadow: 1px 1px 0px rgba(0, 0, 0, 0.5);
-  }
-
-  .text-shadow-light {
-    text-shadow: 1px 1px 0px rgba(0, 0, 0, 0.3);
-  }
-
-  /* Add a class for text on darker backgrounds */
-  .text-on-dark {
-    color: white;
-    text-shadow: 1px 1px 0px rgba(0, 0, 0, 0.5);
-  }
-
-  /* Add a class for text on lighter backgrounds */
-  .text-on-light {
-    color: #111;
-    text-shadow: none;
-  }
-
-  /* Add a class for container with better text contrast */
   .text-container {
     background-color: rgba(255, 255, 255, 0.85);
     padding: 0.5rem;
     border-radius: 0.25rem;
     backdrop-filter: blur(4px);
   }
-
-  .retro-gradient {
-    @apply bg-gradient-to-r from-primary via-secondary to-accent;
-  }
-
-  .retro-noise {
-    position: relative;
-  }
-
-  .retro-noise::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
-    opacity: 0.05;
-    pointer-events: none;
-  }
-
-  .vhs-effect {
-    position: relative;
-    overflow: hidden;
-  }
-
-  .vhs-effect::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 2px;
-    background: rgba(255, 255, 255, 0.5);
-    animation: vhs-scan 8s linear infinite;
-    pointer-events: none;
-  }
-
-  @keyframes vhs-scan {
-    0% {
-      top: -10%;
-    }
-    100% {
-      top: 110%;
-    }
-  }
 }
 
-/* Custom scrollbar for indie feel */
+/* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 12px;
 }
@@ -265,18 +120,5 @@
 
 ::-webkit-scrollbar-thumb:hover {
   background: #ff5252;
-}
-
-@keyframes marquee {
-  0% {
-    transform: translateX(0%);
-  }
-  100% {
-    transform: translateX(-100%);
-  }
-}
-
-.animate-marquee {
-  animation: marquee 25s linear infinite;
 }
 

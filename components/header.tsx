@@ -9,16 +9,9 @@ export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
 
   return (
-    <header className="w-full py-4 px-6 bg-gradient-to-r from-primary to-secondary border-b-4 border-black sticky top-0 z-50 vhs-effect">
+    <header className="w-full py-4 px-6 bg-[#FD6C6C] border-b-4 border-black sticky top-0 z-50">
       <div className="max-w-7xl mx-auto flex justify-between items-center">
         <Link href="/" className="flex items-center gap-2">
-          <motion.div
-            initial={{ rotate: 0 }}
-            animate={{ rotate: 360 }}
-            transition={{ duration: 4, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
-          >
-            <Disc className="h-8 w-8" />
-          </motion.div>
           <motion.h1
             className="text-2xl md:text-4xl font-bold"
             style={{ fontFamily: "var(--font-marker)" }}

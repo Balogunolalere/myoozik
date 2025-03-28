@@ -30,7 +30,7 @@ export function SongCard({
 
   return (
     <motion.div
-      className={`neobrutalist-card ${isPlaying ? "bg-primary/20" : ""}`}
+      className={`neobrutalist-card max-w-2xl mx-auto ${isPlaying ? "bg-[#FD6C6C]/20" : ""}`}
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}
       whileHover={{
@@ -88,7 +88,7 @@ export function SongCard({
                 {[1, 2, 3, 4, 5].map((i) => (
                   <motion.div
                     key={i}
-                    className="w-2 h-2 bg-primary rounded-full"
+                    className="w-2 h-2 bg-[#FD6C6C] rounded-full"
                     animate={{
                       height: [2, 12, 2],
                     }}

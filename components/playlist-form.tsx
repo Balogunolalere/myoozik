@@ -97,21 +97,11 @@ export function PlaylistForm() {
 
   return (
     <motion.div
-      className="neobrutalist-container w-full max-w-2xl mx-auto relative overflow-hidden"
+      className="neobrutalist-container w-full max-w-2xl mx-auto relative overflow-hidden bg-[#FD6C6C]"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
     >
-      <div className="absolute -top-6 -right-6 z-10">
-        <motion.div
-          className="w-16 h-16 bg-accent rounded-full border-4 border-black flex items-center justify-center"
-          animate={{ rotate: [0, 360] }}
-          transition={{ duration: 20, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
-        >
-          <Music className="h-8 w-8" />
-        </motion.div>
-      </div>
-
       <h2 className="text-2xl font-bold mb-4" style={{ fontFamily: "var(--font-marker)" }}>
         Add YouTube Playlist
       </h2>

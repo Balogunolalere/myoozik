@@ -2,15 +2,15 @@
 
 import Link from "next/link"
 import Image from "next/image"
-import { Music, Star, Disc } from "lucide-react"
+import { Music, Star } from "lucide-react"
 import { motion } from "framer-motion"
 
 interface PlaylistCardProps {
   id: number
   youtubeId: string
   title: string
-  description?: string
-  thumbnailUrl?: string
+  description?: string | null
+  thumbnailUrl?: string | null
   songCount: number
   averageRating?: number
 }
@@ -37,17 +37,7 @@ export function PlaylistCard({
       transition={{ duration: 0.5 }}
     >
       <Link href={`/playlist/${id}`} className="block h-full">
-        <div className="neobrutalist-card h-full bg-gradient-to-br from-white to-amber-50 vhs-effect">
-          <div className="absolute -top-3 -right-3 z-10">
-            <motion.div
-              className="w-12 h-12 bg-accent rounded-full border-4 border-black flex items-center justify-center"
-              animate={{ rotate: [0, 360] }}
-              transition={{ duration: 20, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
-            >
-              <Disc className="h-6 w-6" />
-            </motion.div>
-          </div>
-
+        <div className="neobrutalist-card h-full bg-[#FD6C6C]">
           <div className="relative aspect-video mb-3 overflow-hidden border-4 border-black">
             {thumbnailUrl ? (
               <Image src={thumbnailUrl || "/placeholder.svg"} alt={title} fill className="object-cover" />
