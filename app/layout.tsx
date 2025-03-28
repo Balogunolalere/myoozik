@@ -1,5 +1,4 @@
 import type React from "react"
-import type { Metadata } from "next"
 import { Inter, Rubik_Mono_One, Permanent_Marker, Indie_Flower } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
@@ -21,22 +20,17 @@ const indieFlower = Indie_Flower({
   variable: "--font-indie",
 })
 
-export const metadata: Metadata = {
-  title: "myo͞ozik - Social Music Playlist Rating",
-  description: "Rate and comment on YouTube music playlists anonymously",
-    generator: 'v0.dev'
-}
-
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
-      <body
-        className={`${inter.variable} ${rubikMonoOne.variable} ${permanentMarker.variable} ${indieFlower.variable} font-sans`}
-      >
+    <html lang="en" className={`${indieFlower.variable} ${permanentMarker.variable}`}>
+      <body className="min-h-screen relative">
+        <div className="fixed inset-0 pointer-events-none z-[-1]">
+          <div className="absolute inset-0 bg-gradient-to-br from-amber-50/50 via-white/30 to-amber-50/50" />
+        </div>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
           {children}
         </ThemeProvider>
@@ -44,7 +38,3 @@ export default function RootLayout({
     </html>
   )
 }
-
-
-
-import './globals.css'

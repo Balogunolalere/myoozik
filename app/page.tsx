@@ -6,6 +6,7 @@ import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { PlaylistCard } from "@/components/playlist-card"
 import { TopPlaylistsScoreboard } from "@/components/top-playlists-scoreboard"
+import { VinylSpinner } from "@/components/vinyl-spinner"
 import Link from "next/link"
 import { motion } from "framer-motion"
 
@@ -98,7 +99,7 @@ export default function Home() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-amber-50">
+    <div className="flex flex-col min-h-screen">
       <Header />
       <main className="flex-1 container mx-auto px-4 py-8 max-w-4xl">
         <section className="mb-12">
@@ -166,7 +167,7 @@ export default function Home() {
 
           {isLoading ? (
             <div className="flex justify-center items-center py-20">
-              <div className="h-16 w-16 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+              <VinylSpinner size={64} />
             </div>
           ) : playlists.length === 0 ? (
             <motion.div

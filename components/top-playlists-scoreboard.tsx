@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { Star, Trophy } from "lucide-react"
+import { VinylSpinner } from "@/components/vinyl-spinner"
 import Link from "next/link"
 import { motion } from "framer-motion"
 
@@ -38,15 +39,55 @@ export function TopPlaylistsScoreboard() {
   }
 
   if (isLoading) {
-    return <div className="text-center">Loading top playlists...</div>
+    return (
+      <div className="neobrutalist-container bg-[#FD6C6C] p-6">
+        <h2 className="text-2xl font-bold mb-4 flex items-center gap-2" style={{ fontFamily: "var(--font-marker)" }}>
+          <Trophy className="h-6 w-6" />
+          Loading Top Rated Playlists
+        </h2>
+        <div className="flex justify-center items-center gap-8 py-12">
+          {[40, 48, 32].map((size, index) => (
+            <motion.div
+              key={index}
+              initial={{ y: 0 }}
+              animate={{ y: [0, -10, 0] }}
+              transition={{
+                duration: 1.5,
+                repeat: Infinity,
+                delay: index * 0.2,
+                ease: "easeInOut"
+              }}
+            >
+              <VinylSpinner size={size} />
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    )
   }
 
   if (error) {
-    return <div className="text-center text-red-600">{error}</div>
+    return (
+      <div className="neobrutalist-container bg-[#FD6C6C] p-6">
+        <h2 className="text-2xl font-bold mb-4 flex items-center gap-2" style={{ fontFamily: "var(--font-marker)" }}>
+          <Trophy className="h-6 w-6" />
+          Top Rated Playlists
+        </h2>
+        <div className="text-center text-red-600">{error}</div>
+      </div>
+    )
   }
 
   if (topPlaylists.length === 0) {
-    return <div className="text-center">No rated playlists yet</div>
+    return (
+      <div className="neobrutalist-container bg-[#FD6C6C] p-6">
+        <h2 className="text-2xl font-bold mb-4 flex items-center gap-2" style={{ fontFamily: "var(--font-marker)" }}>
+          <Trophy className="h-6 w-6" />
+          Top Rated Playlists
+        </h2>
+        <div className="text-center">No rated playlists yet</div>
+      </div>
+    )
   }
 
   const trophyColors = ["text-yellow-400", "text-gray-400", "text-amber-600"]

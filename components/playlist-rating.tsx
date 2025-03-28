@@ -3,6 +3,7 @@ import { useState, useEffect } from "react"
 import { Star } from "lucide-react"
 import { createClientSupabaseClient } from "@/lib/supabase"
 import { motion } from "framer-motion"
+import { VinylSpinner } from "@/components/vinyl-spinner"
 
 interface PlaylistRatingProps {
   playlistId: number
@@ -113,6 +114,17 @@ export function PlaylistRating({
           </motion.button>
         ))}
       </div>
+      {isSubmitting && (
+        <motion.div
+          className="flex items-center gap-2 mt-2"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <VinylSpinner size={20} />
+          <span>Submitting rating...</span>
+        </motion.div>
+      )}
       {error && (
         <motion.div
           className="text-sm text-red-600 mt-1"

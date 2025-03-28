@@ -7,6 +7,7 @@ import { SongCard } from "@/components/song-card"
 import { YouTubePlayer } from "@/components/youtube-player"
 import { PlaylistRating } from "@/components/playlist-rating"
 import { PlaylistCommentSection } from "@/components/playlist-comment-section"
+import { VinylSpinner } from "@/components/vinyl-spinner"
 import { createClientSupabaseClient } from "@/lib/supabase"
 import { motion, AnimatePresence } from "framer-motion"
 
@@ -145,8 +146,45 @@ export default function PlaylistPage({ params }: PlaylistPageProps) {
 
   const currentSong = currentSongIndex !== null ? songs[currentSongIndex] : null
 
+  if (!isMounted) {
+    return null
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col min-h-screen">
+        <Header />
+        <main className="flex-1 container mx-auto px-4 py-8 max-w-4xl">
+          <div className="flex justify-center items-center py-20">
+            <VinylSpinner size={64} />
+          </div>
+        </main>
+        <Footer />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col min-h-screen">
+        <Header />
+        <main className="flex-1 container mx-auto px-4 py-8 max-w-4xl">
+          <div className="neobrutalist-container bg-red-100 text-center py-12">
+            <p className="text-xl text-red-600 mb-4">{error}</p>
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <button onClick={fetchPlaylistData} className="neobrutalist-button">
+                Try Again
+              </button>
+            </motion.div>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    )
+  }
+
   return (
-    <div className="flex flex-col min-h-screen bg-amber-50">
+    <div className="flex flex-col min-h-screen">
       <Header />
       <main className="flex-1 container mx-auto px-4 py-8 max-w-4xl">
         {isLoading ? (

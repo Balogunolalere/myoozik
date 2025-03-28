@@ -9,6 +9,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
 import { MessageSquare, Send } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
+import { useToast } from "@/components/ui/use-toast"
+import { VinylSpinner } from "@/components/vinyl-spinner"
 
 interface Comment {
   id: number
@@ -27,6 +29,7 @@ export function PlaylistCommentSection({ playlistId }: PlaylistCommentSectionPro
   const [nickname, setNickname] = useState("Anonymous")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const { toast } = useToast()
 
   const supabase = createClientSupabaseClient()
 
@@ -50,6 +53,11 @@ export function PlaylistCommentSection({ playlistId }: PlaylistCommentSectionPro
       setComments(data || [])
     } catch (error) {
       console.error("Error fetching comments:", error)
+      toast({
+        title: "Error",
+        description: "Failed to load comments. Please try again.",
+        variant: "destructive",
+      })
     } finally {
       setIsLoading(false)
     }
@@ -78,8 +86,17 @@ export function PlaylistCommentSection({ playlistId }: PlaylistCommentSectionPro
 
       setNewComment("")
       fetchComments() // Refresh comments
+      toast({
+        title: "Success",
+        description: "Comment posted successfully!",
+      })
     } catch (error) {
       console.error("Error submitting comment:", error)
+      toast({
+        title: "Error",
+        description: "Failed to post comment. Please try again.",
+        variant: "destructive",
+      })
     } finally {
       setIsSubmitting(false)
     }
@@ -135,7 +152,14 @@ export function PlaylistCommentSection({ playlistId }: PlaylistCommentSectionPro
               disabled={isSubmitting || !newComment.trim()}
               className="neobrutalist-button self-end"
             >
-              <Send className="h-5 w-5" />
+              {isSubmitting ? (
+                <div className="flex items-center gap-2">
+                  <VinylSpinner size={20} />
+                  <span>Posting...</span>
+                </div>
+              ) : (
+                <Send className="h-5 w-5" />
+              )}
             </Button>
           </motion.div>
         </div>
@@ -143,9 +167,8 @@ export function PlaylistCommentSection({ playlistId }: PlaylistCommentSectionPro
 
       <div className="space-y-4">
         {isLoading ? (
-          <div className="text-center py-4">
-            <div className="h-8 w-8 border-4 border-black border-t-transparent rounded-full animate-spin" />
-            <p className="mt-2">Loading comments...</p>
+          <div className="flex justify-center items-center py-12">
+            <VinylSpinner size={48} />
           </div>
         ) : comments.length === 0 ? (
           <p className="text-center py-4" style={{ fontFamily: "var(--font-indie)" }}>
