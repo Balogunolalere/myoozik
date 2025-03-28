@@ -50,8 +50,8 @@ export default function PlaylistPage({ params, searchParams }: PageProps) {
   }
 
   const handleStopSong = () => {
-    if (playerRef.current?.togglePlay) {
-      playerRef.current.togglePlay()
+    if (playerRef.current?.stop) {
+      playerRef.current.stop()
     }
   }
 

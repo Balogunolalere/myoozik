@@ -23,7 +23,7 @@ declare global {
   }
 }
 
-export const YouTubePlayer = forwardRef<{ togglePlay: () => void }, YouTubePlayerProps>(({
+export const YouTubePlayer = forwardRef<{ togglePlay: () => void, stop: () => void }, YouTubePlayerProps>(({
   videoId,
   onEnded,
   autoplay = false,
@@ -55,6 +55,18 @@ export const YouTubePlayer = forwardRef<{ togglePlay: () => void }, YouTubePlaye
           }
         } catch (error) {
           console.error("Error toggling play state:", error)
+        }
+      }
+    },
+    stop: () => {
+      if (player && isReady) {
+        try {
+          player.stopVideo()
+          setIsPlaying(false)
+          onPlayStateChange?.(false)
+          setCurrentTime(0)
+        } catch (error) {
+          console.error("Error stopping video:", error)
         }
       }
     }
