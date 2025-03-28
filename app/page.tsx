@@ -1,101 +1,29 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { createClientSupabaseClient } from "@/lib/supabase"
+import { useEffect, useState } from "react"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { PlaylistCard } from "@/components/playlist-card"
 import { TopPlaylistsScoreboard } from "@/components/top-playlists-scoreboard"
 import { VinylSpinner } from "@/components/vinyl-spinner"
+import { Plus } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import Link from "next/link"
-import { motion } from "framer-motion"
-
-interface Playlist {
-  id: number
-  youtubeId: string
-  title: string
-  description: string | null
-  thumbnailUrl?: string | null
-  songCount: number
-  averageRating?: number
-}
+import { motion, AnimatePresence } from "framer-motion"
+import usePlaylistStore from "@/lib/stores/playlist-store"
+import type { Playlist } from "@/lib/types"
 
 export default function Home() {
-  const [playlists, setPlaylists] = useState<Playlist[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const { playlists, isLoading, error, fetchPlaylists } = usePlaylistStore()
   const [isMounted, setIsMounted] = useState(false)
 
   useEffect(() => {
     setIsMounted(true)
     fetchPlaylists()
-  }, [])
+  }, [fetchPlaylists])
 
-  const fetchPlaylists = async () => {
-    setIsLoading(true)
-    const supabase = createClientSupabaseClient()
-
-    try {
-      // Get playlists
-      const { data: playlistsData, error: playlistsError } = await supabase
-        .from("playlists")
-        .select(`
-          id,
-          youtube_playlist_id,
-          title,
-          description
-        `)
-        .returns<{ id: number; youtube_playlist_id: string; title: string; description: string | null }[]>()
-
-      if (playlistsError) throw playlistsError
-
-      // Process each playlist to get additional data
-      const processedPlaylists = await Promise.all(
-        playlistsData.map(async (playlist) => {
-          // Get songs for this playlist
-          const { data: songs, error: songsError } = await supabase
-            .from("songs")
-            .select("id, thumbnail_url")
-            .eq("playlist_id", playlist.id)
-            .returns<{ id: number; thumbnail_url: string | null }[]>()
-
-          if (songsError) throw songsError
-
-          const songCount = songs ? songs.length : 0
-          const thumbnailUrl = songs && songs.length > 0 ? songs[0].thumbnail_url : undefined
-
-          // Get ratings for this playlist
-          const { data: ratings, error: ratingsError } = await supabase
-            .from("playlist_ratings")
-            .select("rating")
-            .eq("playlist_id", playlist.id)
-            .returns<{ rating: number }[]>()
-
-          if (ratingsError) throw ratingsError
-
-          let averageRating = undefined
-          if (ratings && ratings.length > 0) {
-            const sum = ratings.reduce((acc, curr) => acc + curr.rating, 0)
-            averageRating = sum / ratings.length
-          }
-
-          return {
-            id: playlist.id,
-            youtubeId: playlist.youtube_playlist_id,
-            title: playlist.title,
-            description: playlist.description,
-            thumbnailUrl,
-            songCount,
-            averageRating,
-          }
-        })
-      )
-
-      setPlaylists(processedPlaylists)
-    } catch (error) {
-      console.error("Error fetching playlists:", error)
-    } finally {
-      setIsLoading(false)
-    }
+  if (!isMounted) {
+    return null
   }
 
   return (
@@ -112,89 +40,114 @@ export default function Home() {
             <div className="relative z-10">
               <div className="text-container">
                 <motion.h1
-                  className="text-4xl md:text-6xl font-bold mb-4"
+                  className="text-4xl font-bold mb-4"
                   style={{ fontFamily: "var(--font-marker)" }}
-                  initial={{ x: -50, opacity: 0 }}
-                  animate={{ x: 0, opacity: 1 }}
-                  transition={{ duration: 0.5, delay: 0.2 }}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.1 }}
                 >
-                  myo͞ozik
+                  Welcome to Myoozik
                 </motion.h1>
                 <motion.p
-                  className="text-xl md:text-2xl mb-6"
+                  className="text-lg mb-6"
                   style={{ fontFamily: "var(--font-indie)" }}
-                  initial={{ x: -50, opacity: 0 }}
-                  animate={{ x: 0, opacity: 1 }}
-                  transition={{ duration: 0.5, delay: 0.4 }}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.2 }}
                 >
-                  Share, rate, and discover YouTube music playlists anonymously.
+                  Share and discover YouTube music playlists. Rate your favorites and join the conversation!
                 </motion.p>
                 <motion.div
-                  initial={{ y: 20, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ duration: 0.5, delay: 0.6 }}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.3 }}
                 >
-                  <Link href="/add-playlist" className="neobrutalist-button inline-block">
-                    Add Your Playlist
+                  <Link href="/add-playlist">
+                    <Button className="neobrutalist-button">
+                      <Plus className="mr-2 h-4 w-4" />
+                      Add Your Playlist
+                    </Button>
                   </Link>
                 </motion.div>
               </div>
             </div>
           </motion.div>
+
+          <motion.div
+            className="grid gap-8 grid-cols-1 md:grid-cols-3"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.4 }}
+          >
+            {[
+              {
+                title: "Discover",
+                description: "Find new music from other users' playlists",
+                icon: "🎵",
+              },
+              {
+                title: "Share",
+                description: "Share your favorite YouTube playlists with others",
+                icon: "🎶",
+              },
+              {
+                title: "Rate",
+                description: "Rate playlists and leave comments anonymously",
+                icon: "⭐",
+              },
+            ].map((item, index) => (
+              <motion.div 
+                key={index} 
+                className="neobrutalist-container text-center bg-[#FD6C6C]" 
+                whileHover={{ y: -5 }}
+              >
+                <div className="flex justify-center mb-4 text-4xl">{item.icon}</div>
+                <h3 className="font-bold text-lg mb-2" style={{ fontFamily: "var(--font-marker)" }}>
+                  {item.title}
+                </h3>
+                <p style={{ fontFamily: "var(--font-indie)" }}>{item.description}</p>
+              </motion.div>
+            ))}
+          </motion.div>
         </section>
 
-        <motion.section
-          className="mb-12"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-        >
+        <section className="mb-12">
           <TopPlaylistsScoreboard />
-        </motion.section>
+        </section>
 
         <section>
           <motion.h2
-            className="text-2xl font-bold mb-6 border-b-4 border-black pb-2"
+            className="text-2xl font-bold mb-6"
             style={{ fontFamily: "var(--font-marker)" }}
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
           >
-            Featured Playlists
+            All Playlists
           </motion.h2>
 
           {isLoading ? (
-            <div className="flex justify-center items-center py-20">
+            <div className="flex justify-center items-center py-12">
               <VinylSpinner size={64} />
             </div>
-          ) : playlists.length === 0 ? (
+          ) : error ? (
             <motion.div
-              className="neobrutalist-container text-center py-12"
+              className="neobrutalist-container bg-red-100 text-center py-8"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
             >
-              <p className="text-xl mb-4" style={{ fontFamily: "var(--font-indie)" }}>
-                No playlists yet!
-              </p>
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Link href="/add-playlist" className="neobrutalist-button inline-block">
-                  Add the First Playlist
-                </Link>
-              </motion.div>
+              <p className="text-xl text-red-600 mb-4">{error}</p>
+              <Button onClick={fetchPlaylists} className="neobrutalist-button">
+                Try Again
+              </Button>
             </motion.div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-6">
-              {playlists.map((playlist, index) => (
-                <motion.div
-                  key={playlist.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: index * 0.1 }}
-                >
+            <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
+              <AnimatePresence>
+                {playlists.map((playlist: Playlist) => (
                   <PlaylistCard
+                    key={playlist.id}
                     id={playlist.id}
                     youtubeId={playlist.youtubeId}
                     title={playlist.title}
@@ -203,8 +156,8 @@ export default function Home() {
                     songCount={playlist.songCount}
                     averageRating={playlist.averageRating}
                   />
-                </motion.div>
-              ))}
+                ))}
+              </AnimatePresence>
             </div>
           )}
         </section>

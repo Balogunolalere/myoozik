@@ -1,8 +1,7 @@
 "use client"
 
 import type React from "react"
-
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { Play, Pause, SkipForward, SkipBack, Volume2, VolumeX } from "lucide-react"
 import { motion } from "framer-motion"
 import { Slider } from "./ui/slider"
@@ -38,134 +37,186 @@ export function YouTubePlayer({
   const [isMuted, setIsMuted] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
+  const [isReady, setIsReady] = useState(false)
   const playerRef = useRef<HTMLDivElement>(null)
-  const playerContainerId = `youtube-player-${Math.random().toString(36).substring(2, 9)}`
+  const timeUpdateInterval = useRef<NodeJS.Timeout | null>(null)
+  const playerContainerId = useRef(`youtube-player-${Math.random().toString(36).substring(2, 9)}`)
 
+  const clearTimeUpdateInterval = useCallback(() => {
+    if (timeUpdateInterval.current) {
+      clearInterval(timeUpdateInterval.current)
+      timeUpdateInterval.current = null
+    }
+  }, [])
+
+  const startTimeUpdate = useCallback(() => {
+    clearTimeUpdateInterval()
+    if (player && isReady) {
+      timeUpdateInterval.current = setInterval(() => {
+        try {
+          const currentTime = player.getCurrentTime()
+          const duration = player.getDuration()
+          setCurrentTime(currentTime)
+          setDuration(duration)
+        } catch (error) {
+          console.error("Error updating time:", error)
+        }
+      }, 200) // Update more frequently for smoother progress
+    }
+  }, [player, isReady])
+
+  // Load YouTube API
   useEffect(() => {
-    // Load YouTube API
     if (!window.YT) {
       const tag = document.createElement("script")
       tag.src = "https://www.youtube.com/iframe_api"
       const firstScriptTag = document.getElementsByTagName("script")[0]
       firstScriptTag.parentNode?.insertBefore(tag, firstScriptTag)
-
       window.onYouTubeIframeAPIReady = initializePlayer
     } else {
       initializePlayer()
     }
 
     return () => {
+      clearTimeUpdateInterval()
       if (player) {
-        player.destroy()
+        try {
+          player.destroy()
+        } catch (error) {
+          console.error("Error destroying player:", error)
+        }
       }
     }
   }, [])
 
   useEffect(() => {
-    if (player && videoId) {
-      player.loadVideoById(videoId)
-      if (isPlaying) {
-        player.playVideo()
-      } else {
-        player.pauseVideo()
+    if (player && isReady && videoId) {
+      try {
+        player.loadVideoById(videoId)
+        if (isPlaying) {
+          player.playVideo()
+        } else {
+          player.pauseVideo()
+        }
+        // Reset time tracking
+        setCurrentTime(0)
+        const newDuration = player.getDuration()
+        setDuration(newDuration)
+      } catch (error) {
+        console.error("Error loading video:", error)
       }
     }
-  }, [videoId])
+  }, [videoId, isReady])
 
   const initializePlayer = () => {
     if (!playerRef.current) return
 
-    const newPlayer = new window.YT.Player(playerContainerId, {
-      height: "0",
-      width: "0",
-      videoId: videoId,
-      playerVars: {
-        autoplay: autoplay ? 1 : 0,
-        controls: 0,
-        disablekb: 1,
-        enablejsapi: 1,
-        iv_load_policy: 3,
-        modestbranding: 1,
-        rel: 0,
-        showinfo: 0,
-      },
-      events: {
-        onReady: onPlayerReady,
-        onStateChange: onPlayerStateChange,
-      },
-    })
+    try {
+      const newPlayer = new window.YT.Player(playerContainerId.current, {
+        height: "0",
+        width: "0",
+        videoId: videoId,
+        playerVars: {
+          autoplay: autoplay ? 1 : 0,
+          controls: 0,
+          disablekb: 1,
+          enablejsapi: 1,
+          iv_load_policy: 3,
+          modestbranding: 1,
+          rel: 0,
+          showinfo: 0,
+          origin: window.location.origin,
+        },
+        events: {
+          onReady: onPlayerReady,
+          onStateChange: onPlayerStateChange,
+          onError: (event: any) => {
+            console.error("YouTube player error:", event.data)
+          },
+        },
+      })
 
-    setPlayer(newPlayer)
+      setPlayer(newPlayer)
+    } catch (error) {
+      console.error("Error initializing player:", error)
+    }
   }
 
   const onPlayerReady = (event: any) => {
-    setDuration(event.target.getDuration())
-    if (autoplay) {
-      event.target.playVideo()
+    try {
+      setIsReady(true)
+      const duration = event.target.getDuration()
+      setDuration(duration)
+      if (autoplay) {
+        event.target.playVideo()
+      }
+    } catch (error) {
+      console.error("Error in onPlayerReady:", error)
     }
   }
 
   const onPlayerStateChange = (event: any) => {
-    if (event.data === window.YT.PlayerState.PLAYING) {
-      setIsPlaying(true)
-      startTimeUpdate()
-    } else {
-      setIsPlaying(false)
-      stopTimeUpdate()
-    }
-
-    if (event.data === window.YT.PlayerState.ENDED) {
-      if (onEnded) onEnded()
-    }
-  }
-
-  const timeUpdateInterval = useRef<NodeJS.Timeout | null>(null)
-
-  const startTimeUpdate = () => {
-    if (timeUpdateInterval.current) clearInterval(timeUpdateInterval.current)
-    timeUpdateInterval.current = setInterval(() => {
-      if (player) {
-        setCurrentTime(player.getCurrentTime())
+    try {
+      if (event.data === window.YT.PlayerState.PLAYING) {
+        setIsPlaying(true)
+        startTimeUpdate()
+      } else if (event.data === window.YT.PlayerState.PAUSED) {
+        setIsPlaying(false)
+        clearTimeUpdateInterval()
+      } else if (event.data === window.YT.PlayerState.ENDED) {
+        setIsPlaying(false)
+        clearTimeUpdateInterval()
+        if (onEnded) onEnded()
+      } else if (event.data === window.YT.PlayerState.BUFFERING) {
+        // Keep updating time during buffering
+        startTimeUpdate()
       }
-    }, 1000)
-  }
-
-  const stopTimeUpdate = () => {
-    if (timeUpdateInterval.current) {
-      clearInterval(timeUpdateInterval.current)
-      timeUpdateInterval.current = null
+    } catch (error) {
+      console.error("Error in onPlayerStateChange:", error)
     }
   }
 
-  const togglePlay = () => {
-    if (player) {
-      if (isPlaying) {
-        player.pauseVideo()
-      } else {
-        player.playVideo()
+  const togglePlay = useCallback(() => {
+    if (player && isReady) {
+      try {
+        if (isPlaying) {
+          player.pauseVideo()
+        } else {
+          player.playVideo()
+        }
+      } catch (error) {
+        console.error("Error toggling play state:", error)
       }
     }
-  }
+  }, [player, isPlaying, isReady])
 
-  const toggleMute = () => {
-    if (player) {
-      if (isMuted) {
-        player.unMute()
-        setIsMuted(false)
-      } else {
-        player.mute()
-        setIsMuted(true)
+  const toggleMute = useCallback(() => {
+    if (player && isReady) {
+      try {
+        if (isMuted) {
+          player.unMute()
+          setIsMuted(false)
+        } else {
+          player.mute()
+          setIsMuted(true)
+        }
+      } catch (error) {
+        console.error("Error toggling mute state:", error)
       }
     }
-  }
+  }, [player, isMuted, isReady])
 
-  const handleSeek = (value: number[]) => {
+  const handleSeek = useCallback((value: number[]) => {
     const seekTime = value[0]
-    if (player) {
-      player.seekTo(seekTime)
-      setCurrentTime(seekTime)
+    if (player && isReady) {
+      try {
+        player.seekTo(seekTime, true)
+        setCurrentTime(seekTime)
+      } catch (error) {
+        console.error("Error seeking:", error)
+      }
     }
-  }
+  }, [player, isReady])
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60)
@@ -181,21 +232,20 @@ export function YouTubePlayer({
       transition={{ duration: 0.5 }}
     >
       <div ref={playerRef}>
-        <div id={playerContainerId}></div>
+        <div id={playerContainerId.current}></div>
       </div>
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2 p-4">
         <div className="flex items-center gap-2">
+          <span className="text-sm font-mono min-w-[4em]">{formatTime(currentTime)}</span>
           <Slider
             value={[currentTime]}
             min={0}
-            max={duration}
+            max={duration || 100}
             step={1}
             onValueChange={handleSeek}
-            className="w-full"
+            className="flex-1"
           />
-          <span className="text-sm font-mono whitespace-nowrap">
-            {formatTime(currentTime)} / {formatTime(duration)}
-          </span>
+          <span className="text-sm font-mono min-w-[4em]">{formatTime(duration)}</span>
         </div>
         <div className="flex justify-between items-center">
           <div className="flex gap-2">

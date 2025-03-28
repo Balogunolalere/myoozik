@@ -1,9 +1,9 @@
 "use client"
 import { useState, useEffect } from "react"
 import { Star } from "lucide-react"
-import { createClientSupabaseClient } from "@/lib/supabase"
 import { motion } from "framer-motion"
 import { VinylSpinner } from "@/components/vinyl-spinner"
+import useInteractionStore from "@/lib/stores/interaction-store"
 
 interface PlaylistRatingProps {
   playlistId: number
@@ -22,69 +22,20 @@ export function PlaylistRating({
 }: PlaylistRatingProps) {
   const [rating, setRating] = useState(initialRating)
   const [hover, setHover] = useState(0)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [hasRated, setHasRated] = useState(false)
-  const [error, setError] = useState("")
-  const supabase = createClientSupabaseClient()
+  const { hasRated, isSubmittingRating, error, submitRating, checkIfRated } = useInteractionStore()
 
   useEffect(() => {
-    // Check if user has already rated
-    const checkExistingRating = async () => {
-      const { data, error } = await supabase
-        .from("playlist_ratings")
-        .select("rating")
-        .eq("playlist_id", playlistId)
-        .is("ip_address", null)
-        .maybeSingle()
-
-      if (data?.rating) {
-        setRating(Number(data.rating))
-        setHasRated(true)
-      }
-    }
-
-    checkExistingRating()
+    checkIfRated(playlistId)
   }, [playlistId])
 
   const handleRating = async (value: number) => {
-    if (isSubmitting || hasRated) return
-    setIsSubmitting(true)
-    setError("")
-
-    try {
-      const response = await fetch("/api/ratings/playlist", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ 
-          playlistId, 
-          rating: value 
-        }),
-      })
-
-      const data = await response.json()
-      
-      if (!response.ok) {
-        if (data.error === "already_rated") {
-          setError("You have already rated this playlist")
-          setHasRated(true)
-          return
-        }
-        throw new Error(data.error || "Failed to submit rating")
-      }
-
-      setRating(value)
-      setHasRated(true)
-      
-      if (onRatingSubmit) {
-        onRatingSubmit(value)
-      }
-    } catch (error) {
-      console.error("Error submitting rating:", error)
-      setError("Failed to submit rating. Please try again.")
-    } finally {
-      setIsSubmitting(false)
+    if (hasRated) return
+    
+    await submitRating(playlistId, value)
+    setRating(value)
+    
+    if (onRatingSubmit) {
+      onRatingSubmit(value)
     }
   }
 
@@ -95,7 +46,7 @@ export function PlaylistRating({
           <motion.button
             key={star}
             type="button"
-            disabled={isSubmitting || hasRated}
+            disabled={isSubmittingRating || hasRated}
             onClick={() => handleRating(star)}
             onMouseEnter={() => !hasRated && setHover(star)}
             onMouseLeave={() => !hasRated && setHover(0)}
@@ -114,7 +65,7 @@ export function PlaylistRating({
           </motion.button>
         ))}
       </div>
-      {isSubmitting && (
+      {isSubmittingRating && (
         <motion.div
           className="flex items-center gap-2 mt-2"
           initial={{ opacity: 0, y: 10 }}

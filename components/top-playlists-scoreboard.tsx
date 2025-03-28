@@ -1,42 +1,24 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useEffect } from "react"
+import Link from "next/link"
 import { Star, Trophy } from "lucide-react"
 import { VinylSpinner } from "@/components/vinyl-spinner"
-import Link from "next/link"
-import { motion } from "framer-motion"
-
-interface TopPlaylist {
-  id: number
-  title: string
-  youtubeId: string
-  totalRatings: number
-  averageRating: number
-}
+import { motion, AnimatePresence } from "framer-motion"
+import usePlaylistStore from "@/lib/stores/playlist-store"
 
 export function TopPlaylistsScoreboard() {
-  const [topPlaylists, setTopPlaylists] = useState<TopPlaylist[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState("")
+  const { playlists, isLoading, error, fetchPlaylists } = usePlaylistStore()
 
   useEffect(() => {
-    fetchTopPlaylists()
+    fetchPlaylists()
   }, [])
 
-  const fetchTopPlaylists = async () => {
-    try {
-      const response = await fetch("/api/ratings/top")
-      if (!response.ok) throw new Error("Failed to fetch top playlists")
-      
-      const data = await response.json()
-      setTopPlaylists(data)
-    } catch (error) {
-      console.error("Error fetching top playlists:", error)
-      setError("Failed to load top playlists")
-    } finally {
-      setIsLoading(false)
-    }
-  }
+  // Get top 3 rated playlists
+  const topPlaylists = [...playlists]
+    .sort((a, b) => (b.averageRating || 0) - (a.averageRating || 0))
+    .slice(0, 3)
+    .filter(playlist => playlist.averageRating !== undefined)
 
   if (isLoading) {
     return (
@@ -115,12 +97,9 @@ export function TopPlaylistsScoreboard() {
                 </h3>
                 <div className="flex items-center gap-1">
                   <span className="text-sm font-bold">
-                    {playlist.averageRating.toFixed(1)}
+                    {playlist.averageRating?.toFixed(1)}
                   </span>
                   <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                  <span className="text-sm text-gray-600">
-                    ({playlist.totalRatings})
-                  </span>
                 </div>
               </div>
             </Link>

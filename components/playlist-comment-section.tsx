@@ -3,7 +3,6 @@
 import type React from "react"
 
 import { useState, useEffect } from "react"
-import { createClientSupabaseClient } from "@/lib/supabase"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
@@ -11,94 +10,41 @@ import { MessageSquare, Send } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { useToast } from "@/components/ui/use-toast"
 import { VinylSpinner } from "@/components/vinyl-spinner"
-
-interface Comment {
-  id: number
-  content: string
-  nickname: string
-  created_at: string
-}
+import useInteractionStore from "@/lib/stores/interaction-store"
+import type { Comment } from "@/lib/types"
 
 interface PlaylistCommentSectionProps {
   playlistId: number
 }
 
 export function PlaylistCommentSection({ playlistId }: PlaylistCommentSectionProps) {
-  const [comments, setComments] = useState<Comment[]>([])
   const [newComment, setNewComment] = useState("")
   const [nickname, setNickname] = useState("Anonymous")
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
+  const { comments, isLoadingComments, isSubmittingComment, error, fetchComments, submitComment } = useInteractionStore()
   const { toast } = useToast()
 
-  const supabase = createClientSupabaseClient()
-
   useEffect(() => {
-    fetchComments()
-  }, [playlistId])
-
-  const fetchComments = async () => {
-    setIsLoading(true)
-
-    try {
-      const { data, error } = await supabase
-        .from("playlist_comments")
-        .select("*")
-        .eq("playlist_id", playlistId)
-        .order("created_at", { ascending: false })
-        .returns<Comment[]>()
-
-      if (error) throw error
-
-      setComments(data || [])
-    } catch (error) {
-      console.error("Error fetching comments:", error)
-      toast({
-        title: "Error",
-        description: "Failed to load comments. Please try again.",
-        variant: "destructive",
-      })
-    } finally {
-      setIsLoading(false)
-    }
-  }
+    fetchComments(playlistId)
+  }, [playlistId, fetchComments])
 
   const handleSubmitComment = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!newComment.trim() || isSubmitting) return
-
-    setIsSubmitting(true)
+    if (!newComment.trim() || isSubmittingComment) return
 
     try {
-      const { data, error } = await supabase
-        .from("playlist_comments")
-        .insert([
-          {
-            playlist_id: playlistId,
-            content: newComment.trim(),
-            nickname: nickname.trim() || "Anonymous",
-          },
-        ])
-        .select()
-
-      if (error) throw error
-
+      await submitComment(playlistId, newComment, nickname)
       setNewComment("")
-      fetchComments() // Refresh comments
       toast({
         title: "Success",
         description: "Comment posted successfully!",
       })
-    } catch (error) {
-      console.error("Error submitting comment:", error)
+    } catch (err) {
       toast({
         title: "Error",
         description: "Failed to post comment. Please try again.",
         variant: "destructive",
       })
-    } finally {
-      setIsSubmitting(false)
     }
   }
 
@@ -149,10 +95,10 @@ export function PlaylistCommentSection({ playlistId }: PlaylistCommentSectionPro
           <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
             <Button
               type="submit"
-              disabled={isSubmitting || !newComment.trim()}
+              disabled={isSubmittingComment || !newComment.trim()}
               className="neobrutalist-button self-end"
             >
-              {isSubmitting ? (
+              {isSubmittingComment ? (
                 <div className="flex items-center gap-2">
                   <VinylSpinner size={20} />
                   <span>Posting...</span>
@@ -166,7 +112,7 @@ export function PlaylistCommentSection({ playlistId }: PlaylistCommentSectionPro
       </form>
 
       <div className="space-y-4">
-        {isLoading ? (
+        {isLoadingComments ? (
           <div className="flex justify-center items-center py-12">
             <VinylSpinner size={48} />
           </div>
@@ -176,7 +122,7 @@ export function PlaylistCommentSection({ playlistId }: PlaylistCommentSectionPro
           </p>
         ) : (
           <AnimatePresence>
-            {comments.map((comment, index) => (
+            {comments.map((comment: Comment, index: number) => (
               <motion.div
                 key={comment.id}
                 className="border-4 border-black p-3 bg-white"
