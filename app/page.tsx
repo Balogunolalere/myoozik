@@ -5,6 +5,7 @@ import { createClientSupabaseClient } from "@/lib/supabase"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { PlaylistCard } from "@/components/playlist-card"
+import { TopPlaylistsScoreboard } from "@/components/top-playlists-scoreboard"
 import Link from "next/link"
 import { motion } from "framer-motion"
 
@@ -142,6 +143,15 @@ export default function Home() {
             </div>
           </motion.div>
         </section>
+
+        <motion.section
+          className="mb-12"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+        >
+          <TopPlaylistsScoreboard />
+        </motion.section>
 
         <section>
           <motion.h2

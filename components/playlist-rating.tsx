@@ -1,6 +1,5 @@
 "use client"
-
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Star } from "lucide-react"
 import { createClientSupabaseClient } from "@/lib/supabase"
 import { motion } from "framer-motion"
@@ -24,18 +23,56 @@ export function PlaylistRating({
   const [hover, setHover] = useState(0)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [hasRated, setHasRated] = useState(false)
+  const [error, setError] = useState("")
   const supabase = createClientSupabaseClient()
 
-  const handleRating = async (value: number) => {
-    if (isSubmitting) return
-    setIsSubmitting(true)
-    try {
-      const { error } = await supabase
+  useEffect(() => {
+    // Check if user has already rated
+    const checkExistingRating = async () => {
+      const { data, error } = await supabase
         .from("playlist_ratings")
-        .insert([{ playlist_id: playlistId, rating: value }])
+        .select("rating")
+        .eq("playlist_id", playlistId)
+        .is("ip_address", null)
+        .maybeSingle()
+
+      if (data?.rating) {
+        setRating(Number(data.rating))
+        setHasRated(true)
+      }
+    }
+
+    checkExistingRating()
+  }, [playlistId])
+
+  const handleRating = async (value: number) => {
+    if (isSubmitting || hasRated) return
+    setIsSubmitting(true)
+    setError("")
+
+    try {
+      const response = await fetch("/api/ratings/playlist", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ 
+          playlistId, 
+          rating: value 
+        }),
+      })
+
+      const data = await response.json()
       
-      if (error) throw error
-      
+      if (!response.ok) {
+        if (data.error === "already_rated") {
+          setError("You have already rated this playlist")
+          setHasRated(true)
+          return
+        }
+        throw new Error(data.error || "Failed to submit rating")
+      }
+
       setRating(value)
       setHasRated(true)
       
@@ -44,6 +81,7 @@ export function PlaylistRating({
       }
     } catch (error) {
       console.error("Error submitting rating:", error)
+      setError("Failed to submit rating. Please try again.")
     } finally {
       setIsSubmitting(false)
     }
@@ -75,7 +113,16 @@ export function PlaylistRating({
           </motion.button>
         ))}
       </div>
-
+      {error && (
+        <motion.div
+          className="text-sm text-red-600 mt-1"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          {error}
+        </motion.div>
+      )}
       {totalRatings > 0 && (
         <div className="text-sm mt-1">
           <span className="font-bold">{averageRating.toFixed(1)}</span>
@@ -85,8 +132,7 @@ export function PlaylistRating({
           </span>
         </div>
       )}
-
-      {hasRated && (
+      {hasRated && !error && (
         <motion.div
           className="text-sm text-green-600 mt-1"
           initial={{ opacity: 0, y: 10 }}
