@@ -202,53 +202,53 @@ export function SongCard({
 
           {/* Control overlay */}
           <motion.div
-            className="absolute inset-0 flex items-center justify-center gap-1 sm:gap-2"
+            className="absolute inset-0 flex items-center justify-center"
             initial={{ opacity: 0 }}
             animate={{ opacity: (isHovering || localPlayState) && !isCanceled ? 1 : 0 }}
           >
             {!isCanceled && (
-              <>
+              <div className="flex items-center gap-[2px] sm:gap-1">
                 <motion.button
                   onClick={handlePlayPause}
-                  className="neobrutalist-button !p-1.5 sm:!p-2 bg-white/90 hover:bg-[#FD6C6C]"
+                  className="neobrutalist-button !p-[3px] sm:!p-1.5 bg-white/90 hover:bg-[#FD6C6C]"
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
                   aria-label={localPlayState ? "Pause song" : "Play song"}
                 >
-                  {localPlayState ? <Pause className="h-4 w-4 sm:h-5 sm:w-5" /> : <Play className="h-4 w-4 sm:h-5 sm:w-5" />}
+                  {localPlayState ? <Pause className="h-2.5 w-2.5 sm:h-4 sm:w-4" /> : <Play className="h-2.5 w-2.5 sm:h-4 sm:w-4" />}
                 </motion.button>
                 {(localPlayState || isHovering) && (
                   <>
                     <motion.button
                       onClick={handleMute}
-                      className="neobrutalist-button !p-1.5 sm:!p-2 bg-white/90 hover:bg-[#FD6C6C]"
+                      className="neobrutalist-button !p-[3px] sm:!p-1.5 bg-white/90 hover:bg-[#FD6C6C]"
                       whileHover={{ scale: 1.1 }}
                       whileTap={{ scale: 0.9 }}
                       aria-label={isMuted ? "Unmute" : "Mute"}
                     >
-                      {isMuted ? <VolumeX className="h-4 w-4 sm:h-5 sm:w-5" /> : <Volume2 className="h-4 w-4 sm:h-5 sm:w-5" />}
+                      {isMuted ? <VolumeX className="h-2.5 w-2.5 sm:h-4 sm:w-4" /> : <Volume2 className="h-2.5 w-2.5 sm:h-4 sm:w-4" />}
                     </motion.button>
                     <motion.button
                       onClick={handleStop}
-                      className="neobrutalist-button !p-1.5 sm:!p-2 bg-white/90 hover:bg-[#FD6C6C]"
+                      className="neobrutalist-button !p-[3px] sm:!p-1.5 bg-white/90 hover:bg-[#FD6C6C]"
                       whileHover={{ scale: 1.1 }}
                       whileTap={{ scale: 0.9 }}
                       aria-label="Stop playback"
                     >
-                      <Square className="h-4 w-4 sm:h-5 sm:w-5" />
+                      <Square className="h-2.5 w-2.5 sm:h-4 sm:w-4" />
                     </motion.button>
                     <motion.button
                       onClick={handleCancel}
-                      className="neobrutalist-button !p-1.5 sm:!p-2 bg-white/90 hover:bg-[#FD6C6C]"
+                      className="neobrutalist-button !p-[3px] sm:!p-1.5 bg-white/90 hover:bg-[#FD6C6C]"
                       whileHover={{ scale: 1.1 }}
                       whileTap={{ scale: 0.9 }}
                       aria-label="Cancel playback"
                     >
-                      <X className="h-4 w-4 sm:h-5 sm:w-5" />
+                      <X className="h-2.5 w-2.5 sm:h-4 sm:w-4" />
                     </motion.button>
                   </>
                 )}
-              </>
+              </div>
             )}
           </motion.div>
           
@@ -261,12 +261,12 @@ export function SongCard({
             >
               <motion.button
                 onClick={handlePlayPause}
-                className="neobrutalist-button !p-1.5 sm:!p-2 bg-white/90 hover:bg-[#FD6C6C]"
+                className="neobrutalist-button !p-[3px] sm:!p-1.5 bg-white/90 hover:bg-[#FD6C6C]"
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
                 aria-label="Play song"
               >
-                <Play className="h-4 w-4 sm:h-5 sm:w-5" />
+                <Play className="h-2.5 w-2.5 sm:h-4 sm:w-4" />
               </motion.button>
             </motion.div>
           )}
