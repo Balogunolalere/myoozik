@@ -54,14 +54,18 @@ export function YouTubePlayer({
     if (player && isReady) {
       timeUpdateInterval.current = setInterval(() => {
         try {
-          const currentTime = player.getCurrentTime()
-          const duration = player.getDuration()
-          setCurrentTime(currentTime)
-          setDuration(duration)
+          if (player.getCurrentTime && player.getDuration) {
+            const currentTime = player.getCurrentTime() || 0
+            const duration = player.getDuration() || 0
+            setCurrentTime(currentTime)
+            if (duration > 0) {
+              setDuration(duration)
+            }
+          }
         } catch (error) {
           console.error("Error updating time:", error)
         }
-      }, 200) // Update more frequently for smoother progress
+      }, 100) // Update more frequently for smoother progress
     }
   }, [player, isReady])
 
@@ -145,11 +149,13 @@ export function YouTubePlayer({
   const onPlayerReady = (event: any) => {
     try {
       setIsReady(true)
-      const duration = event.target.getDuration()
+      const duration = event.target.getDuration() || 0
       setDuration(duration)
       if (autoplay) {
         event.target.playVideo()
       }
+      // Start time updates immediately
+      startTimeUpdate()
     } catch (error) {
       console.error("Error in onPlayerReady:", error)
     }
@@ -162,7 +168,8 @@ export function YouTubePlayer({
         startTimeUpdate()
       } else if (event.data === window.YT.PlayerState.PAUSED) {
         setIsPlaying(false)
-        clearTimeUpdateInterval()
+        // Keep updating time even when paused
+        startTimeUpdate()
       } else if (event.data === window.YT.PlayerState.ENDED) {
         setIsPlaying(false)
         clearTimeUpdateInterval()
@@ -219,6 +226,7 @@ export function YouTubePlayer({
   }, [player, isReady])
 
   const formatTime = (seconds: number) => {
+    if (!seconds || isNaN(seconds)) return "0:00"
     const mins = Math.floor(seconds / 60)
     const secs = Math.floor(seconds % 60)
     return `${mins}:${secs.toString().padStart(2, "0")}`
@@ -236,16 +244,16 @@ export function YouTubePlayer({
       </div>
       <div className="flex flex-col gap-2 p-4">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-mono min-w-[4em]">{formatTime(currentTime)}</span>
+          <span className="text-sm font-mono min-w-[4em]">{formatTime(currentTime || 0)}</span>
           <Slider
-            value={[currentTime]}
+            value={[currentTime || 0]}
             min={0}
             max={duration || 100}
             step={1}
             onValueChange={handleSeek}
             className="flex-1"
           />
-          <span className="text-sm font-mono min-w-[4em]">{formatTime(duration)}</span>
+          <span className="text-sm font-mono min-w-[4em]">{formatTime(duration || 0)}</span>
         </div>
         <div className="flex justify-between items-center">
           <div className="flex gap-2">
