@@ -30,11 +30,15 @@ export default function PlaylistPage({ params, searchParams }: PageProps) {
       await fetchPlaylistDetails(playlistId)
     }
     loadPlaylist()
-    return () => reset() // Reset interaction state when unmounting
+    return () => reset()
   }, [playlistId, fetchPlaylistDetails, reset])
 
   const handlePlaySong = (index: number) => {
     setCurrentSongIndex(index)
+  }
+
+  const handleStopSong = () => {
+    setCurrentSongIndex(null)
   }
 
   const handleSongEnded = () => {
@@ -56,7 +60,6 @@ export default function PlaylistPage({ params, searchParams }: PageProps) {
   }
 
   const handleRatingSubmit = async () => {
-    // Refresh playlist data to update the rating
     await fetchPlaylistDetails(playlistId)
   }
 
@@ -106,7 +109,7 @@ export default function PlaylistPage({ params, searchParams }: PageProps) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <div className="neobrutalist-container bg-[#FD6C6C] relative overflow-hidden">
+            <div className="neobrutalist-container bg-gradient-to-br from-[#FD6C6C] to-[#FFB199] relative overflow-hidden">
               <div className="relative z-10">
                 <div className="flex flex-col md:flex-row md:items-center gap-4 mb-6">
                   <div className="text-container">
@@ -138,26 +141,17 @@ export default function PlaylistPage({ params, searchParams }: PageProps) {
             </div>
           </motion.div>
 
+          {/* Hidden YouTubePlayer for audio playback */}
           {currentSong && (
-            <motion.div
-              className="mb-8"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-            >
-              <h2 className="text-xl font-bold mb-4" style={{ fontFamily: "var(--font-marker)" }}>
-                Now Playing
-              </h2>
-              <YouTubePlayer
-                videoId={currentSong.youtube_video_id}
-                onEnded={handleSongEnded}
-                autoplay={true}
-                onNext={handleNextSong}
-                onPrevious={handlePreviousSong}
-                hasNext={currentSongIndex !== null && currentSongIndex < songs.length - 1}
-                hasPrevious={currentSongIndex !== null && currentSongIndex > 0}
-              />
-            </motion.div>
+            <YouTubePlayer
+              videoId={currentSong.youtube_video_id}
+              onEnded={handleSongEnded}
+              autoplay={true}
+              onNext={handleNextSong}
+              onPrevious={handlePreviousSong}
+              hasNext={currentSongIndex !== null && currentSongIndex < songs.length - 1}
+              hasPrevious={currentSongIndex !== null && currentSongIndex > 0}
+            />
           )}
 
           <motion.div
@@ -166,10 +160,6 @@ export default function PlaylistPage({ params, searchParams }: PageProps) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
           >
-            <h2 className="text-xl font-bold mb-4" style={{ fontFamily: "var(--font-marker)" }}>
-              Songs in Playlist
-            </h2>
-
             <div className="grid gap-4">
               <AnimatePresence>
                 {songs.map((song: Song, index: number) => (
@@ -188,6 +178,7 @@ export default function PlaylistPage({ params, searchParams }: PageProps) {
                       thumbnailUrl={song.thumbnail_url}
                       duration={song.duration}
                       onPlay={() => handlePlaySong(index)}
+                      onStop={handleStopSong}
                       isPlaying={currentSongIndex === index}
                     />
                   </motion.div>

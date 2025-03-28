@@ -112,6 +112,20 @@ export function YouTubePlayer({
     }
   }, [videoId, isReady])
 
+  useEffect(() => {
+    if (player && isReady) {
+      try {
+        if (isMuted) {
+          player.mute()
+        } else {
+          player.unMute()
+        }
+      } catch (error) {
+        console.error("Error updating mute state:", error)
+      }
+    }
+  }, [isMuted, player, isReady])
+
   const initializePlayer = () => {
     if (!playerRef.current) return
 
@@ -233,72 +247,11 @@ export function YouTubePlayer({
   }
 
   return (
-    <motion.div
-      className="neobrutalist-container w-full bg-[#FD6C6C] relative overflow-hidden"
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-    >
+    <div style={{ display: 'none' }}>
       <div ref={playerRef}>
         <div id={playerContainerId.current}></div>
       </div>
-      <div className="flex flex-col gap-2 p-4">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-mono min-w-[4em]">{formatTime(currentTime || 0)}</span>
-          <Slider
-            value={[currentTime || 0]}
-            min={0}
-            max={duration || 100}
-            step={1}
-            onValueChange={handleSeek}
-            className="flex-1"
-          />
-          <span className="text-sm font-mono min-w-[4em]">{formatTime(duration || 0)}</span>
-        </div>
-        <div className="flex justify-between items-center">
-          <div className="flex gap-2">
-            <motion.button
-              onClick={onPrevious}
-              className="neobrutalist-button"
-              disabled={!hasPrevious}
-              whileHover={{ scale: hasPrevious ? 1.1 : 1 }}
-              whileTap={{ scale: hasPrevious ? 0.9 : 1 }}
-              aria-label="Previous song"
-            >
-              <SkipBack size={20} />
-            </motion.button>
-            <motion.button
-              onClick={togglePlay}
-              className="neobrutalist-button"
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              aria-label={isPlaying ? "Pause" : "Play"}
-            >
-              {isPlaying ? <Pause size={20} /> : <Play size={20} />}
-            </motion.button>
-            <motion.button
-              onClick={onNext}
-              className="neobrutalist-button"
-              disabled={!hasNext}
-              whileHover={{ scale: hasNext ? 1.1 : 1 }}
-              whileTap={{ scale: hasNext ? 0.9 : 1 }}
-              aria-label="Next song"
-            >
-              <SkipForward size={20} />
-            </motion.button>
-            <motion.button
-              onClick={toggleMute}
-              className="neobrutalist-button"
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              aria-label={isMuted ? "Unmute" : "Mute"}
-            >
-              {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
-            </motion.button>
-          </div>
-        </div>
-      </div>
-    </motion.div>
+    </div>
   )
 }
 
