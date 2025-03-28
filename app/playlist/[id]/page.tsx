@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useRef } from "react"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { SongCard } from "@/components/song-card"
@@ -25,6 +25,7 @@ export default function PlaylistPage({ params, searchParams }: PageProps) {
   const playlistId = params.id
   const { currentPlaylist, songs, currentSongIndex, isLoading, error, fetchPlaylistDetails, setCurrentSongIndex } = usePlaylistStore()
   const { reset } = useInteractionStore()
+  const playerRef = useRef<any>(null)
 
   useEffect(() => {
     const loadPlaylist = async () => {
@@ -35,11 +36,21 @@ export default function PlaylistPage({ params, searchParams }: PageProps) {
   }, [playlistId, fetchPlaylistDetails, reset])
 
   const handlePlaySong = (index: number) => {
-    setCurrentSongIndex(index)
+    if (currentSongIndex === index) {
+      // If clicking the same song, just toggle play/pause
+      if (playerRef.current?.togglePlay) {
+        playerRef.current.togglePlay()
+      }
+    } else {
+      // If clicking a different song, change to it
+      setCurrentSongIndex(index)
+    }
   }
 
   const handleStopSong = () => {
-    setCurrentSongIndex(null)
+    if (playerRef.current?.togglePlay) {
+      playerRef.current.togglePlay()
+    }
   }
 
   const handleSongEnded = () => {
@@ -111,6 +122,7 @@ export default function PlaylistPage({ params, searchParams }: PageProps) {
       {/* Hidden YouTubePlayer */}
       {currentSong && (
         <YouTubePlayer
+          ref={playerRef}
           videoId={currentSong.youtube_video_id}
           onEnded={handleSongEnded}
           autoplay={true}
@@ -124,13 +136,11 @@ export default function PlaylistPage({ params, searchParams }: PageProps) {
       <main className="flex-1">
         {/* Hero Section */}
         <motion.div
-          className="w-full bg-gradient-to-br from-[#FD6C6C] to-[#FFB199] py-16 relative overflow-hidden"
+          className="w-full bg-white py-12 relative overflow-hidden border-b-4 border-black"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.6 }}
         >
-          <div className="absolute inset-0 bg-[url('/vinyl-pattern.svg')] opacity-10" />
-          
           <div className="container mx-auto px-4">
             <div className="max-w-4xl mx-auto relative">
               <motion.div
@@ -139,14 +149,14 @@ export default function PlaylistPage({ params, searchParams }: PageProps) {
                 transition={{ delay: 0.2 }}
               >
                 <h1 
-                  className="text-4xl md:text-5xl font-bold text-white mb-4 break-words"
+                  className="text-4xl md:text-5xl font-bold text-black mb-4 break-words"
                   style={{ fontFamily: "var(--font-marker)" }}
                 >
                   {currentPlaylist?.title}
                 </h1>
                 {currentPlaylist?.description && (
                   <p 
-                    className="text-xl text-white/90 mb-6"
+                    className="text-xl text-gray-600 mb-6"
                     style={{ fontFamily: "var(--font-indie)" }}
                   >
                     {currentPlaylist.description}
@@ -154,7 +164,7 @@ export default function PlaylistPage({ params, searchParams }: PageProps) {
                 )}
               </motion.div>
 
-              <div className="flex flex-wrap gap-6 text-white/90">
+              <div className="flex flex-wrap gap-6 text-gray-600">
                 <div className="flex items-center gap-2">
                   <Music className="w-5 h-5" />
                   <span>{songs.length} songs</span>

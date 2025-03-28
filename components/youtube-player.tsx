@@ -1,7 +1,6 @@
 "use client"
 
-import type React from "react"
-import { useState, useEffect, useRef, useCallback } from "react"
+import { forwardRef, useEffect, useRef, useCallback, useImperativeHandle, useState } from "react"
 import { Play, Pause, SkipForward, SkipBack, Volume2, VolumeX } from "lucide-react"
 import { motion } from "framer-motion"
 import { Slider } from "./ui/slider"
@@ -23,7 +22,7 @@ declare global {
   }
 }
 
-export function YouTubePlayer({
+export const YouTubePlayer = forwardRef<{ togglePlay: () => void }, YouTubePlayerProps>(({
   videoId,
   onEnded,
   autoplay = false,
@@ -31,7 +30,7 @@ export function YouTubePlayer({
   onPrevious,
   hasNext = false,
   hasPrevious = false,
-}: YouTubePlayerProps) {
+}, ref) => {
   const [player, setPlayer] = useState<any>(null)
   const [isPlaying, setIsPlaying] = useState(autoplay)
   const [isMuted, setIsMuted] = useState(false)
@@ -41,6 +40,23 @@ export function YouTubePlayer({
   const playerRef = useRef<HTMLDivElement>(null)
   const timeUpdateInterval = useRef<NodeJS.Timeout | null>(null)
   const playerContainerId = useRef(`youtube-player-${Math.random().toString(36).substring(2, 9)}`)
+
+  // Expose togglePlay method through ref
+  useImperativeHandle(ref, () => ({
+    togglePlay: () => {
+      if (player && isReady) {
+        try {
+          if (isPlaying) {
+            player.pauseVideo()
+          } else {
+            player.playVideo()
+          }
+        } catch (error) {
+          console.error("Error toggling play state:", error)
+        }
+      }
+    }
+  }))
 
   const clearTimeUpdateInterval = useCallback(() => {
     if (timeUpdateInterval.current) {
@@ -253,5 +269,5 @@ export function YouTubePlayer({
       </div>
     </div>
   )
-}
+})
 

@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useState } from "react"
-import { Disc, Menu, X } from "lucide-react"
+import { Menu, X } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 
 export function Header() {
@@ -13,7 +13,7 @@ export function Header() {
       <div className="max-w-7xl mx-auto flex justify-between items-center">
         <Link href="/" className="flex items-center gap-2">
           <motion.h1
-            className="text-2xl md:text-4xl font-bold"
+            className="text-2xl md:text-4xl font-bold text-white"
             style={{ fontFamily: "var(--font-marker)" }}
             initial={{ y: -20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
@@ -25,12 +25,12 @@ export function Header() {
 
         <nav className="hidden md:flex gap-6">
           <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-            <Link href="/" className="neobrutalist-button">
+            <Link href="/" className="neobrutalist-button !bg-white hover:!bg-white/90">
               Home
             </Link>
           </motion.div>
           <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-            <Link href="/add-playlist" className="neobrutalist-button">
+            <Link href="/add-playlist" className="neobrutalist-button !bg-white hover:!bg-white/90">
               Add Playlist
             </Link>
           </motion.div>
@@ -38,7 +38,7 @@ export function Header() {
 
         <div className="md:hidden">
           <motion.button
-            className="neobrutalist-button"
+            className="neobrutalist-button !bg-white hover:!bg-white/90"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
             whileTap={{ scale: 0.9 }}
           >
@@ -57,12 +57,12 @@ export function Header() {
             transition={{ duration: 0.3 }}
           >
             <div className="p-4 flex flex-col gap-4">
-              <Link href="/" className="neobrutalist-button w-full text-center" onClick={() => setIsMenuOpen(false)}>
+              <Link href="/" className="neobrutalist-button w-full text-center !bg-[#FD6C6C] hover:!bg-[#FD6C6C]/90" onClick={() => setIsMenuOpen(false)}>
                 Home
               </Link>
               <Link
                 href="/add-playlist"
-                className="neobrutalist-button w-full text-center"
+                className="neobrutalist-button w-full text-center !bg-[#FD6C6C] hover:!bg-[#FD6C6C]/90"
                 onClick={() => setIsMenuOpen(false)}
               >
                 Add Playlist
