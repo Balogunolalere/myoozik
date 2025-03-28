@@ -13,6 +13,7 @@ interface YouTubePlayerProps {
   onPrevious?: () => void
   hasNext?: boolean
   hasPrevious?: boolean
+  onPlayStateChange?: (isPlaying: boolean) => void
 }
 
 declare global {
@@ -30,6 +31,7 @@ export const YouTubePlayer = forwardRef<{ togglePlay: () => void }, YouTubePlaye
   onPrevious,
   hasNext = false,
   hasPrevious = false,
+  onPlayStateChange,
 }, ref) => {
   const [player, setPlayer] = useState<any>(null)
   const [isPlaying, setIsPlaying] = useState(autoplay)
@@ -195,13 +197,16 @@ export const YouTubePlayer = forwardRef<{ togglePlay: () => void }, YouTubePlaye
     try {
       if (event.data === window.YT.PlayerState.PLAYING) {
         setIsPlaying(true)
+        onPlayStateChange?.(true)
         startTimeUpdate()
       } else if (event.data === window.YT.PlayerState.PAUSED) {
         setIsPlaying(false)
+        onPlayStateChange?.(false)
         // Keep updating time even when paused
         startTimeUpdate()
       } else if (event.data === window.YT.PlayerState.ENDED) {
         setIsPlaying(false)
+        onPlayStateChange?.(false)
         clearTimeUpdateInterval()
         if (onEnded) onEnded()
       } else if (event.data === window.YT.PlayerState.BUFFERING) {

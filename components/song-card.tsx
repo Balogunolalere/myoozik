@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Image from "next/image"
 import { Play, Music, Pause, Volume2, VolumeX, X } from "lucide-react"
 import { motion } from "framer-motion"
@@ -30,24 +30,33 @@ export function SongCard({
 }: SongCardProps) {
   const [isHovering, setIsHovering] = useState(false)
   const [isMuted, setIsMuted] = useState(false)
+  const [localPlayState, setLocalPlayState] = useState(isPlaying)
+  
+  // Update local state when prop changes
+  useEffect(() => {
+    setLocalPlayState(isPlaying)
+  }, [isPlaying])
 
   const handleMute = (e: React.MouseEvent) => {
     e.stopPropagation()
     setIsMuted(!isMuted)
   }
-
+  
   const handlePlayPause = (e: React.MouseEvent) => {
     e.stopPropagation()
-    if (isPlaying) {
+    if (localPlayState) {
       onStop?.()
+      setLocalPlayState(false)
     } else {
       onPlay()
+      setLocalPlayState(true)
     }
   }
-
+  
   const handleStop = (e: React.MouseEvent) => {
     e.stopPropagation()
     onStop?.()
+    setLocalPlayState(false)
   }
 
   return (
@@ -169,18 +178,18 @@ export function SongCard({
           <motion.div
             className="absolute inset-0 flex items-center justify-center gap-1 sm:gap-2"
             initial={{ opacity: 0 }}
-            animate={{ opacity: isHovering || isPlaying ? 1 : 0 }}
+            animate={{ opacity: isHovering || localPlayState ? 1 : 0 }}
           >
             <motion.button
               onClick={handlePlayPause}
               className="neobrutalist-button !p-1.5 sm:!p-2 bg-white/90 hover:bg-[#FD6C6C]"
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
-              aria-label={isPlaying ? "Pause song" : "Play song"}
+              aria-label={localPlayState ? "Pause song" : "Play song"}
             >
-              {isPlaying ? <Pause className="h-4 w-4 sm:h-5 sm:w-5" /> : <Play className="h-4 w-4 sm:h-5 sm:w-5" />}
+              {localPlayState ? <Pause className="h-4 w-4 sm:h-5 sm:w-5" /> : <Play className="h-4 w-4 sm:h-5 sm:w-5" />}
             </motion.button>
-            {isPlaying && (
+            {(localPlayState || isHovering) && (
               <>
                 <motion.button
                   onClick={handleMute}

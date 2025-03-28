@@ -58,7 +58,7 @@ export function PlaylistRating({
             <Star
               size={32}
               className={`
-                ${(hover || rating) >= star ? "fill-yellow-400 text-yellow-400" : "text-gray-300"}
+                ${(hover || rating) >= star ? "fill-yellow-400 text-yellow-400" : "text-white/70"}
                 ${hasRated ? "opacity-80" : ""}
               `}
             />
@@ -67,7 +67,7 @@ export function PlaylistRating({
       </div>
       {isSubmittingRating && (
         <motion.div
-          className="flex items-center gap-2 mt-2"
+          className="flex items-center gap-2 mt-2 text-white"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
@@ -78,7 +78,7 @@ export function PlaylistRating({
       )}
       {error && (
         <motion.div
-          className="text-sm text-red-600 mt-1"
+          className="text-sm text-white mt-1"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
@@ -87,9 +87,9 @@ export function PlaylistRating({
         </motion.div>
       )}
       {totalRatings > 0 && (
-        <div className="text-sm mt-1">
+        <div className="text-sm mt-1 text-white">
           <span className="font-bold">{averageRating.toFixed(1)}</span>
-          <span className="text-gray-600">
+          <span className="text-white/80">
             {" "}
             ({totalRatings} {totalRatings === 1 ? "rating" : "ratings"})
           </span>
@@ -97,7 +97,7 @@ export function PlaylistRating({
       )}
       {hasRated && !error && (
         <motion.div
-          className="text-sm text-green-600 mt-1"
+          className="text-sm text-white mt-1"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { SongCard } from "@/components/song-card"
@@ -26,6 +26,7 @@ export default function PlaylistPage({ params, searchParams }: PageProps) {
   const { currentPlaylist, songs, currentSongIndex, isLoading, error, fetchPlaylistDetails, setCurrentSongIndex } = usePlaylistStore()
   const { reset } = useInteractionStore()
   const playerRef = useRef<any>(null)
+  const [isPlayerPlaying, setIsPlayerPlaying] = useState(false)
 
   useEffect(() => {
     const loadPlaylist = async () => {
@@ -44,6 +45,7 @@ export default function PlaylistPage({ params, searchParams }: PageProps) {
     } else {
       // If clicking a different song, change to it
       setCurrentSongIndex(index)
+      setIsPlayerPlaying(true)
     }
   }
 
@@ -73,6 +75,10 @@ export default function PlaylistPage({ params, searchParams }: PageProps) {
 
   const handleRatingSubmit = async () => {
     await fetchPlaylistDetails(playlistId)
+  }
+
+  const handlePlayStateChange = (isPlaying: boolean) => {
+    setIsPlayerPlaying(isPlaying)
   }
 
   const currentSong = currentSongIndex !== null ? songs[currentSongIndex] : null
@@ -130,13 +136,14 @@ export default function PlaylistPage({ params, searchParams }: PageProps) {
           onPrevious={handlePreviousSong}
           hasNext={currentSongIndex !== null && currentSongIndex < songs.length - 1}
           hasPrevious={currentSongIndex !== null && currentSongIndex > 0}
+          onPlayStateChange={handlePlayStateChange}
         />
       )}
 
       <main className="flex-1">
         {/* Hero Section */}
         <motion.div
-          className="w-full bg-white py-12 relative overflow-hidden border-b-4 border-black"
+          className="w-full bg-white py-12 relative overflow-hidden"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.6 }}
@@ -191,14 +198,14 @@ export default function PlaylistPage({ params, searchParams }: PageProps) {
           <div className="max-w-4xl mx-auto">
             {/* Rating Section */}
             <motion.div
-              className="mb-12 neobrutalist-container bg-white"
+              className="mb-12 neobrutalist-container !bg-[#FD6C6C]"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4 }}
             >
               <div className="flex flex-col items-center py-6">
                 <h3 
-                  className="text-2xl font-bold mb-4"
+                  className="text-2xl font-bold mb-4 text-white"
                   style={{ fontFamily: "var(--font-marker)" }}
                 >
                   Rate this playlist
@@ -245,7 +252,7 @@ export default function PlaylistPage({ params, searchParams }: PageProps) {
                         duration={song.duration}
                         onPlay={() => handlePlaySong(index)}
                         onStop={handleStopSong}
-                        isPlaying={currentSongIndex === index}
+                        isPlaying={currentSongIndex === index && isPlayerPlaying}
                       />
                     </motion.div>
                   ))}
