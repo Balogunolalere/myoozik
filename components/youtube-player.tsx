@@ -5,6 +5,7 @@ import type React from "react"
 import { useState, useEffect, useRef } from "react"
 import { Play, Pause, SkipForward, SkipBack, Volume2, VolumeX } from "lucide-react"
 import { motion } from "framer-motion"
+import { Slider } from "./ui/slider"
 
 interface YouTubePlayerProps {
   videoId: string
@@ -158,8 +159,8 @@ export function YouTubePlayer({
     }
   }
 
-  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const seekTime = Number.parseFloat(e.target.value)
+  const handleSeek = (value: number[]) => {
+    const seekTime = value[0]
     if (player) {
       player.seekTo(seekTime)
       setCurrentTime(seekTime)
@@ -184,13 +185,13 @@ export function YouTubePlayer({
       </div>
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-2">
-          <input
-            type="range"
-            min="0"
+          <Slider
+            value={[currentTime]}
+            min={0}
             max={duration}
-            value={currentTime}
-            onChange={handleSeek}
-            className="w-full h-3 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+            step={1}
+            onValueChange={handleSeek}
+            className="w-full"
           />
           <span className="text-sm font-mono whitespace-nowrap">
             {formatTime(currentTime)} / {formatTime(duration)}
