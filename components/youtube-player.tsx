@@ -199,6 +199,7 @@ export const YouTubePlayer = forwardRef<{
           rel: 0,
           showinfo: 0,
           origin: window.location.origin,
+          playsinline: 1, // Enable inline playback on mobile
         },
         events: {
           onReady: onPlayerReady,
@@ -305,7 +306,7 @@ export const YouTubePlayer = forwardRef<{
   }
 
   return (
-    <div style={{ display: 'none' }}>
+    <div style={{ display: 'none' }} className="plyr-youtube">
       <div ref={playerRef}>
         <div id={playerContainerId.current}></div>
       </div>

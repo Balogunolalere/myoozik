@@ -50,20 +50,20 @@ export function SongCard({
   
   const handlePlayPause = (e: React.MouseEvent) => {
     e.stopPropagation()
-    if (isCanceled) {
-      setIsCanceled(false)
-      setIsStopped(false)
-      onPlay()
-      setLocalPlayState(true)
-      return
-    }
     if (localPlayState) {
       onStop?.()
       setLocalPlayState(false)
     } else {
-      setIsStopped(false)
-      onPlay()
-      setLocalPlayState(true)
+      if (!isStopped) {
+        setIsStopped(false)
+        onPlay()
+        setLocalPlayState(true)
+      } else {
+        // If the song was stopped, start from beginning
+        setIsStopped(false)
+        onPlay()
+        setLocalPlayState(true)
+      }
     }
   }
   
