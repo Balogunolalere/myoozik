@@ -25,65 +25,88 @@ export function SongCard({
   thumbnailUrl,
   duration,
   onPlay,
-  onStop,
+  onStop, // Assuming onStop handles both pause and stop actions from the parent
   isPlaying = false,
 }: SongCardProps) {
   const [isHovering, setIsHovering] = useState(false)
   const [isMuted, setIsMuted] = useState(false)
+  // Reflects the actual playback state (playing or not)
   const [localPlayState, setLocalPlayState] = useState(isPlaying)
+  // Indicates if the stop button was the last action causing non-play state
   const [isStopped, setIsStopped] = useState(false)
+  // Indicates if the cancel button was the last action causing non-play state
   const [isCanceled, setIsCanceled] = useState(false)
   
-  // Update local state when prop changes
+  // Sync local state with the isPlaying prop from parent
   useEffect(() => {
     setLocalPlayState(isPlaying)
+    // If the parent indicates playback started, reset stopped/canceled states
     if (isPlaying) {
       setIsStopped(false)
       setIsCanceled(false)
     }
-  }, [isPlaying])
+    // If the parent indicates playback stopped, and it wasn't due to local stop/cancel,
+    // treat it as a pause (don't set isStopped or isCanceled)
+    else if (!isStopped && !isCanceled) {
+       // No explicit action needed here, localPlayState is already set to false
+    }
+  }, [isPlaying]) // Removed isStopped, isCanceled dependency to avoid loops
 
   const handleMute = (e: React.MouseEvent) => {
     e.stopPropagation()
     setIsMuted(!isMuted)
+    // Add logic here to actually mute/unmute the player if needed
   }
   
   const handlePlayPause = (e: React.MouseEvent) => {
     e.stopPropagation()
     if (localPlayState) {
-      onStop?.()
+      // Currently playing -> Pause
+      onStop?.() // Request stop/pause from parent
       setLocalPlayState(false)
+      // Keep isStopped and isCanceled as they are (it's just a pause)
     } else {
-      if (!isStopped) {
-        setIsStopped(false)
-        onPlay()
-        setLocalPlayState(true)
-      } else {
-        // If the song was stopped, start from beginning
-        setIsStopped(false)
-        onPlay()
-        setLocalPlayState(true)
-      }
+      // Currently paused/stopped/canceled -> Play
+      onPlay() // Request play from parent
+      setLocalPlayState(true)
+      setIsStopped(false) // Reset stopped state
+      setIsCanceled(false) // Reset canceled state
     }
   }
   
   const handleStop = (e: React.MouseEvent) => {
     e.stopPropagation()
-    onStop?.()
-    setLocalPlayState(false)
-    setIsStopped(true)
-    setIsCanceled(false)
-    setIsHovering(false)
+    // Only act if playing or if it's currently stopped but hovered 
+    if (localPlayState || isStopped) { 
+        onStop?.() // Request stop from parent
+        setLocalPlayState(false)
+        setIsStopped(true) // Mark as explicitly stopped
+        setIsCanceled(false) // Ensure not marked as canceled
+    }
   }
 
   const handleCancel = (e: React.MouseEvent) => {
     e.stopPropagation()
-    onStop?.()
-    setLocalPlayState(false)
-    setIsStopped(false)
-    setIsCanceled(true)
-    setIsHovering(false)
+     // Only act if playing, paused, stopped, or hovered
+     if (localPlayState || isStopped || isHovering) { 
+        onStop?.() // Request stop from parent
+        setLocalPlayState(false)
+        setIsStopped(false) // Ensure not marked as stopped
+        setIsCanceled(true) // Mark as explicitly canceled: This hides controls on hover
+     }
   }
+
+  // Determine if the main controls should be visible.
+  // Show controls if:
+  // 1. The song is currently playing (localPlayState is true)
+  // OR
+  // 2. The card is being hovered AND it has not been explicitly canceled (!isCanceled).
+  // Clicking Stop sets isCanceled to false, so controls remain visible on hover.
+  // Clicking Cancel sets isCanceled to true, so controls hide on hover.
+  const showControls = localPlayState || (isHovering && !isCanceled);
+  
+  // Determine if the separate play button (for canceled state) should be shown
+  const showCanceledPlayButton = isCanceled && isHovering;
 
   return (
     <motion.div
@@ -170,8 +193,9 @@ export function SongCard({
           </div>
         </div>
 
-        {/* Vinyl Player - Right Side */}
+        {/* Vinyl/Control Area */}
         <div className="relative flex-shrink-0 w-[60px] h-[60px] sm:w-[100px] sm:h-[100px]">
+          {/* Vinyl Disc */}
           <motion.div 
             className="absolute inset-0"
             style={{
@@ -179,8 +203,8 @@ export function SongCard({
               borderRadius: '50%',
               border: '4px sm:8px solid #222',
             }}
-            animate={{ rotate: isPlaying ? 360 : 0 }}
-            transition={{ duration: 2, repeat: isPlaying ? Infinity : 0, ease: "linear" }}
+            animate={{ rotate: localPlayState ? 360 : 0 }} // Animate based on localPlayState
+            transition={{ duration: 2, repeat: localPlayState ? Infinity : 0, ease: "linear" }}
           >
             {/* Vinyl grooves */}
             {Array.from({ length: 5 }).map((_, i) => (
@@ -200,14 +224,17 @@ export function SongCard({
             </div>
           </motion.div>
 
-          {/* Control overlay */}
+          {/* Control overlay - Visibility depends on showControls */}
           <motion.div
-            className="absolute inset-0 flex items-center justify-center"
+            className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-full" 
             initial={{ opacity: 0 }}
-            animate={{ opacity: (isHovering || localPlayState) && !isCanceled ? 1 : 0 }}
+            animate={{ opacity: showControls ? 1 : 0 }} // Controls visibility
+            transition={{ duration: 0.2 }}
           >
-            {!isCanceled && (
+            {/* Conditional rendering inside ensures buttons don't exist when hidden */}
+            {showControls && (
               <div className="flex items-center gap-[2px] sm:gap-1">
+                {/* Play/Pause Button */}
                 <motion.button
                   onClick={handlePlayPause}
                   className="neobrutalist-button !p-[3px] sm:!p-1.5 bg-white/90 hover:bg-[#FD6C6C]"
@@ -217,50 +244,52 @@ export function SongCard({
                 >
                   {localPlayState ? <Pause className="h-2.5 w-2.5 sm:h-4 sm:w-4" /> : <Play className="h-2.5 w-2.5 sm:h-4 sm:w-4" />}
                 </motion.button>
-                {(localPlayState || isHovering) && (
-                  <>
-                    <motion.button
-                      onClick={handleMute}
-                      className="neobrutalist-button !p-[3px] sm:!p-1.5 bg-white/90 hover:bg-[#FD6C6C]"
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.9 }}
-                      aria-label={isMuted ? "Unmute" : "Mute"}
-                    >
-                      {isMuted ? <VolumeX className="h-2.5 w-2.5 sm:h-4 sm:w-4" /> : <Volume2 className="h-2.5 w-2.5 sm:h-4 sm:w-4" />}
-                    </motion.button>
-                    <motion.button
-                      onClick={handleStop}
-                      className="neobrutalist-button !p-[3px] sm:!p-1.5 bg-white/90 hover:bg-[#FD6C6C]"
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.9 }}
-                      aria-label="Stop playback"
-                    >
-                      <Square className="h-2.5 w-2.5 sm:h-4 sm:w-4" />
-                    </motion.button>
-                    <motion.button
-                      onClick={handleCancel}
-                      className="neobrutalist-button !p-[3px] sm:!p-1.5 bg-white/90 hover:bg-[#FD6C6C]"
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.9 }}
-                      aria-label="Cancel playback"
-                    >
-                      <X className="h-2.5 w-2.5 sm:h-4 sm:w-4" />
-                    </motion.button>
-                  </>
-                )}
+                
+                {/* Mute/Stop/Cancel Buttons - Always show these if the main controls are visible */}
+                <>
+                  <motion.button
+                    onClick={handleMute}
+                    className="neobrutalist-button !p-[3px] sm:!p-1.5 bg-white/90 hover:bg-[#FD6C6C]"
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    aria-label={isMuted ? "Unmute" : "Mute"}
+                  >
+                    {isMuted ? <VolumeX className="h-2.5 w-2.5 sm:h-4 sm:w-4" /> : <Volume2 className="h-2.5 w-2.5 sm:h-4 sm:w-4" />}
+                  </motion.button>
+                  <motion.button
+                    onClick={handleStop}
+                    className="neobrutalist-button !p-[3px] sm:!p-1.5 bg-white/90 hover:bg-[#FD6C6C]"
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    aria-label="Stop playback"
+                  >
+                    <Square className="h-2.5 w-2.5 sm:h-4 sm:w-4" />
+                  </motion.button>
+                  <motion.button
+                    onClick={handleCancel}
+                    className="neobrutalist-button !p-[3px] sm:!p-1.5 bg-white/90 hover:bg-[#FD6C6C]"
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    aria-label="Cancel playback"
+                  >
+                    <X className="h-2.5 w-2.5 sm:h-4 sm:w-4" />
+                  </motion.button>
+                </>
               </div>
             )}
           </motion.div>
           
-          {/* Show play button on hover when canceled */}
-          {isCanceled && isHovering && (
-            <motion.div
-              className="absolute inset-0 flex items-center justify-center"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-            >
+          {/* Separate Play Button Overlay - Visibility depends on showCanceledPlayButton */}
+          <motion.div
+            className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-full" 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: showCanceledPlayButton ? 1 : 0 }} // Controls visibility
+            transition={{ duration: 0.2 }}
+          >
+             {/* Conditional rendering inside ensures button doesn't exist when hidden */}
+            {showCanceledPlayButton && (
               <motion.button
-                onClick={handlePlayPause}
+                onClick={handlePlayPause} // Re-use handlePlayPause to start playing
                 className="neobrutalist-button !p-[3px] sm:!p-1.5 bg-white/90 hover:bg-[#FD6C6C]"
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
@@ -268,8 +297,8 @@ export function SongCard({
               >
                 <Play className="h-2.5 w-2.5 sm:h-4 sm:w-4" />
               </motion.button>
-            </motion.div>
-          )}
+            )}
+          </motion.div>
         </div>
       </div>
     </motion.div>
