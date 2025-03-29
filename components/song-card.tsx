@@ -63,6 +63,44 @@ export function SongCard({
                 {duration}
               </div>
             )}
+
+            {/* Control overlay */}
+            <motion.div
+              className="absolute inset-0 flex items-center justify-center bg-black/30" 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: isHovering || isPlaying ? 1 : 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              <div className="flex items-center gap-1">
+                <motion.button
+                  onClick={onPlay}
+                  className="neobrutalist-button !p-[3px] sm:!p-1.5 bg-white/90 hover:bg-[#FD6C6C] z-10"
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  aria-label={isPlaying ? "Pause song" : "Play song"}
+                >
+                  {isPlaying ? 
+                    <Pause className="h-2.5 w-2.5 sm:h-4 sm:w-4" /> : 
+                    <Play className="h-2.5 w-2.5 sm:h-4 sm:w-4" />
+                  }
+                </motion.button>
+
+                {onMute && (
+                  <motion.button
+                    onClick={onMute}
+                    className="neobrutalist-button !p-[3px] sm:!p-1.5 bg-white/90 hover:bg-[#FD6C6C] z-10"
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    aria-label={isMuted ? "Unmute" : "Mute"}
+                  >
+                    {isMuted ? 
+                      <VolumeX className="h-2.5 w-2.5 sm:h-4 sm:w-4" /> : 
+                      <Volume2 className="h-2.5 w-2.5 sm:h-4 sm:w-4" />
+                    }
+                  </motion.button>
+                )}
+              </div>
+            </motion.div>
           </div>
 
           <div className="flex flex-col min-w-0 flex-1">
@@ -117,7 +155,7 @@ export function SongCard({
           </div>
         </div>
 
-        {/* Control Area - Right Side */}
+        {/* Vinyl Record - Right Side */}
         <div className="relative flex-shrink-0 w-[60px] h-[60px] sm:w-[100px] sm:h-[100px]">
           <motion.div 
             className="absolute inset-0"
@@ -126,8 +164,20 @@ export function SongCard({
               borderRadius: '50%',
               border: '4px solid #222',
             }}
-            animate={{ rotate: isPlaying ? 360 : 0 }}
-            transition={{ duration: 2, repeat: isPlaying ? Infinity : 0, ease: "linear" }}
+            animate={{ 
+              rotate: isPlaying ? 360 : 0,
+              scale: isPlaying ? 1 : 0.8,
+              opacity: isPlaying ? 1 : 0 
+            }}
+            transition={{ 
+              rotate: {
+                duration: 2,
+                repeat: Infinity,
+                ease: "linear"
+              },
+              scale: { duration: 0.3 },
+              opacity: { duration: 0.3 }
+            }}
           >
             {/* Vinyl grooves */}
             {Array.from({ length: 5 }).map((_, i) => (
@@ -144,44 +194,6 @@ export function SongCard({
             {/* Center label */}
             <div className="absolute inset-[30%] rounded-full bg-[#FD6C6C] border-2 border-[#333] flex items-center justify-center">
               <div className="w-1 h-1 bg-black rounded-full" />
-            </div>
-          </motion.div>
-
-          {/* Control overlay */}
-          <motion.div
-            className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-full" 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: isHovering || isPlaying ? 1 : 0 }}
-            transition={{ duration: 0.2 }}
-          >
-            <div className="flex items-center gap-1">
-              <motion.button
-                onClick={onPlay}
-                className="neobrutalist-button !p-[3px] sm:!p-1.5 bg-white/90 hover:bg-[#FD6C6C] z-10"
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-                aria-label={isPlaying ? "Pause song" : "Play song"}
-              >
-                {isPlaying ? 
-                  <Pause className="h-2.5 w-2.5 sm:h-4 sm:w-4" /> : 
-                  <Play className="h-2.5 w-2.5 sm:h-4 sm:w-4" />
-                }
-              </motion.button>
-
-              {onMute && (
-                <motion.button
-                  onClick={onMute}
-                  className="neobrutalist-button !p-[3px] sm:!p-1.5 bg-white/90 hover:bg-[#FD6C6C] z-10"
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                  aria-label={isMuted ? "Unmute" : "Mute"}
-                >
-                  {isMuted ? 
-                    <VolumeX className="h-2.5 w-2.5 sm:h-4 sm:w-4" /> : 
-                    <Volume2 className="h-2.5 w-2.5 sm:h-4 sm:w-4" />
-                  }
-                </motion.button>
-              )}
             </div>
           </motion.div>
         </div>
