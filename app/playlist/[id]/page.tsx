@@ -60,7 +60,8 @@ function PlaylistPageContent({ params }: PageProps) {
   const handleStopSong = () => {
     if (playerRef.current) {
       playerRef.current.pause()
-      // Only reset the current song, don't nullify the index
+      // Reset the player
+      setCurrentSongIndex(null)
       setIsPlayerPlaying(false)
     }
   }
@@ -70,12 +71,12 @@ function PlaylistPageContent({ params }: PageProps) {
   }
 
   const handleSongEnded = () => {
-    // Auto-play next song if available
     if (currentSongIndex !== null && currentSongIndex < songs.length - 1) {
       setCurrentSongIndex(currentSongIndex + 1)
       setIsPlayerPlaying(true)
     } else {
       setIsPlayerPlaying(false)
+      setCurrentSongIndex(null)
     }
   }
 

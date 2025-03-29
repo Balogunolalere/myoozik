@@ -12,8 +12,6 @@ interface PlaylistStore {
   fetchPlaylists: () => Promise<void>
   fetchPlaylistDetails: (id: string | number) => Promise<void>
   setCurrentSongIndex: (index: number | null) => void
-  playNextSong: () => void
-  playPreviousSong: () => void
 }
 
 const usePlaylistStore = create<PlaylistStore>((set, get) => ({
@@ -150,28 +148,7 @@ const usePlaylistStore = create<PlaylistStore>((set, get) => ({
     }
   },
 
-  setCurrentSongIndex: (index: number | null) => {
-    // Validate the index is within bounds
-    const { songs } = get()
-    if (index !== null && (index < 0 || index >= songs.length)) {
-      return
-    }
-    set({ currentSongIndex: index })
-  },
-
-  playNextSong: () => {
-    const { currentSongIndex, songs } = get()
-    if (currentSongIndex !== null && currentSongIndex < songs.length - 1) {
-      set({ currentSongIndex: currentSongIndex + 1 })
-    }
-  },
-
-  playPreviousSong: () => {
-    const { currentSongIndex } = get()
-    if (currentSongIndex !== null && currentSongIndex > 0) {
-      set({ currentSongIndex: currentSongIndex - 1 })
-    }
-  }
+  setCurrentSongIndex: (index: number | null) => set({ currentSongIndex: index })
 }))
 
 export { usePlaylistStore as default }

@@ -34,21 +34,28 @@ export function SongCard({
 }: SongCardProps) {
   const [isHovering, setIsHovering] = useState(false)
   const [showControls, setShowControls] = useState(true)
+  const [isCancelled, setIsCancelled] = useState(false)
 
+  // Reset cancelled state when the song starts playing
   useEffect(() => {
-    // Show controls when playing starts
     if (isPlaying) {
+      setIsCancelled(false)
       setShowControls(true)
     }
   }, [isPlaying])
 
   const handleVinylClick = () => {
-    setShowControls(true)
+    if (!showControls) {
+      setShowControls(true)
+    }
+    setIsCancelled(false)  // Always reset cancelled state on vinyl click
     onPlay()
   }
 
   const handleCancel = (e: React.MouseEvent) => {
     e.stopPropagation()
+    setShowControls(false)
+    setIsCancelled(true)
     if (onStop) {
       onStop()
     }
