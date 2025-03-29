@@ -1,5 +1,4 @@
 "use client"
-
 import { forwardRef, useEffect, useRef, useCallback, useImperativeHandle, useState } from "react"
 import { Play, Pause, SkipForward, SkipBack, Volume2, VolumeX } from "lucide-react"
 import { motion } from "framer-motion"
@@ -22,6 +21,12 @@ declare global {
     YT: any
     onYouTubeIframeAPIReady: () => void
   }
+}
+
+// Define YouTube API event types to address TypeScript errors
+interface YouTubeEvent {
+  target: any;
+  data?: number;
 }
 
 export const YouTubePlayer = forwardRef<{ 
@@ -49,6 +54,7 @@ export const YouTubePlayer = forwardRef<{
   
   // Store the video's current position when paused
   const pausedAtRef = useRef<Record<string, number>>({});
+  const currentVideoIdRef = useRef<string>(videoId);
   
   const playerRef = useRef<HTMLDivElement>(null)
   const timeUpdateInterval = useRef<NodeJS.Timeout | null>(null)
@@ -62,6 +68,11 @@ export const YouTubePlayer = forwardRef<{
       timeout = setTimeout(() => func(...args), wait);
     };
   }, []);
+
+  // Update current video ID ref when prop changes
+  useEffect(() => {
+    currentVideoIdRef.current = videoId;
+  }, [videoId]);
 
   // Expose methods through ref
   useImperativeHandle(ref, () => ({
@@ -195,7 +206,7 @@ export const YouTubePlayer = forwardRef<{
             playsinline: 1,
           },
           events: {
-            onReady: (event) => {
+            onReady: (event: YouTubeEvent) => {
               if (!isMounted) return;
               setIsReady(true);
               
@@ -212,7 +223,7 @@ export const YouTubePlayer = forwardRef<{
               
               startTimeUpdate();
             },
-            onStateChange: (event) => {
+            onStateChange: (event: YouTubeEvent) => {
               if (!isMounted) return;
               
               if (event.data === window.YT.PlayerState.PLAYING) {
@@ -223,7 +234,8 @@ export const YouTubePlayer = forwardRef<{
               else if (event.data === window.YT.PlayerState.PAUSED) {
                 // When paused naturally, save position
                 if (player && player.getCurrentTime) {
-                  pausedAtRef.current[videoId] = player.getCurrentTime() || 0;
+                  const currentVideoId = currentVideoIdRef.current;
+                  pausedAtRef.current[currentVideoId] = player.getCurrentTime() || 0;
                 }
                 
                 setIsPlaying(false);
@@ -231,15 +243,20 @@ export const YouTubePlayer = forwardRef<{
                 startTimeUpdate();
               } 
               else if (event.data === window.YT.PlayerState.ENDED) {
-                pausedAtRef.current[videoId] = 0;
+                // Reset position for this video
+                pausedAtRef.current[currentVideoIdRef.current] = 0;
                 setIsPlaying(false);
                 onPlayStateChange?.(false);
                 clearTimeUpdateInterval();
                 
-                if (onEnded) onEnded();
+                // Call onEnded to trigger next song playback
+                if (onEnded) {
+                  // Small delay to allow state updates to complete
+                  setTimeout(() => onEnded(), 100);
+                }
               }
             },
-            onError: (event) => {
+            onError: (event: YouTubeEvent) => {
               console.error("YouTube player error:", event.data);
             },
           },
@@ -310,7 +327,7 @@ export const YouTubePlayer = forwardRef<{
     } catch (error) {
       console.error("Error loading video:", error);
     }
-  }, [videoId, isReady, player]);
+  }, [videoId, isReady, player, isPlaying]);
 
   return (
     <div style={{ display: 'none' }} className="plyr-youtube">
@@ -320,4 +337,6 @@ export const YouTubePlayer = forwardRef<{
     </div>
   );
 });
+
+YouTubePlayer.displayName = "YouTubePlayer";
 

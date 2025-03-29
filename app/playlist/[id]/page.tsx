@@ -28,6 +28,7 @@ export default function PlaylistPage({ params, searchParams }: PageProps) {
   const playerRef = useRef<any>(null)
   const [isPlayerPlaying, setIsPlayerPlaying] = useState(false)
   const [isPlayerMuted, setIsPlayerMuted] = useState(false)
+  const [isAutoPlayingNext, setIsAutoPlayingNext] = useState(false)
 
   useEffect(() => {
     const loadPlaylist = async () => {
@@ -47,6 +48,7 @@ export default function PlaylistPage({ params, searchParams }: PageProps) {
       // If clicking a different song, change to it
       setCurrentSongIndex(index)
       setIsPlayerPlaying(true)
+      setIsAutoPlayingNext(false)
     }
   }
 
@@ -71,20 +73,33 @@ export default function PlaylistPage({ params, searchParams }: PageProps) {
   }
 
   const handleSongEnded = () => {
+    // Check if there's a next song available
     if (currentSongIndex !== null && currentSongIndex < songs.length - 1) {
+      // Set flag to indicate we're auto-transitioning to next song
+      setIsAutoPlayingNext(true)
+      // Switch to the next song
       setCurrentSongIndex(currentSongIndex + 1)
+      // Ensure we're still in playing state
+      setIsPlayerPlaying(true)
+    } else {
+      // If we're at the last song, stop playing
+      setIsPlayerPlaying(false)
     }
   }
 
   const handleNextSong = () => {
     if (currentSongIndex !== null && currentSongIndex < songs.length - 1) {
       setCurrentSongIndex(currentSongIndex + 1)
+      setIsPlayerPlaying(true)
+      setIsAutoPlayingNext(false)
     }
   }
 
   const handlePreviousSong = () => {
     if (currentSongIndex !== null && currentSongIndex > 0) {
       setCurrentSongIndex(currentSongIndex - 1)
+      setIsPlayerPlaying(true)
+      setIsAutoPlayingNext(false)
     }
   }
 
@@ -150,7 +165,7 @@ export default function PlaylistPage({ params, searchParams }: PageProps) {
           ref={playerRef}
           videoId={currentSong.youtube_video_id}
           onEnded={handleSongEnded}
-          autoplay={true}
+          autoplay={isPlayerPlaying || isAutoPlayingNext}
           onNext={handleNextSong}
           onPrevious={handlePreviousSong}
           hasNext={currentSongIndex !== null && currentSongIndex < songs.length - 1}
