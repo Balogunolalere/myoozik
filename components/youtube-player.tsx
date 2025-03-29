@@ -63,9 +63,7 @@ export const YouTubePlayer = forwardRef<{
             player.pauseVideo();
           } else {
             // Resume from where we left off
-            if (savedTime > 0) {
-              player.seekTo(savedTime, true);
-            }
+            player.seekTo(savedTime, true);
             player.playVideo();
           }
         } catch (error) {
@@ -136,8 +134,12 @@ export const YouTubePlayer = forwardRef<{
             const currentTime = player.getCurrentTime() || 0
             const duration = player.getDuration() || 0
             setCurrentTime(currentTime)
-            // Update savedTime continuously during playback to always have the latest position
-            setSavedTime(currentTime)
+            
+            // Only update savedTime when playing to avoid overriding paused position
+            if (isPlaying) {
+              setSavedTime(currentTime)
+            }
+            
             if (duration > 0) {
               setDuration(duration)
             }
@@ -147,7 +149,7 @@ export const YouTubePlayer = forwardRef<{
         }
       }, 100) // Update more frequently for smoother progress
     }
-  }, [player, isReady])
+  }, [player, isReady, isPlaying])
 
   // Load YouTube API
   useEffect(() => {
@@ -177,15 +179,9 @@ export const YouTubePlayer = forwardRef<{
   useEffect(() => {
     if (player && isReady && videoId) {
       try {
-        // When video ID changes, either load at saved time or from start
-        if (savedTime > 0) {
-          player.loadVideoById({
-            videoId: videoId,
-            startSeconds: savedTime
-          })
-        } else {
-          player.loadVideoById(videoId)
-        }
+        // When loading a new video, reset the saved time to start from beginning
+        setSavedTime(0);
+        player.loadVideoById(videoId);
         
         // Apply current play/pause state
         if (isPlaying) {
@@ -201,7 +197,7 @@ export const YouTubePlayer = forwardRef<{
           player.unMute()
         }
         
-        setCurrentTime(savedTime)
+        setCurrentTime(0);
         const newDuration = player.getDuration() || 0
         if (newDuration > 0) {
           setDuration(newDuration)
