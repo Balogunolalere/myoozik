@@ -45,11 +45,7 @@ export default function PlaylistPage({ params, searchParams }: PageProps) {
         playerRef.current.togglePlay()
       }
     } else {
-      // If switching to a different song, ensure we stop the current song first
-      if (playerRef.current?.cancel && currentSongIndex !== null) {
-        playerRef.current.cancel()
-      }
-      // Then switch to the new song
+      // If clicking a different song, change to it
       setCurrentSongIndex(index)
       setIsPlayerPlaying(true)
       setIsAutoPlayingNext(false)

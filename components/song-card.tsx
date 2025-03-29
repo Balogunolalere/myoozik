@@ -27,79 +27,112 @@ export function SongCard({
   thumbnailUrl,
   duration,
   onPlay,
-  onStop,
-  onMute,
+  onStop, // Assuming onStop handles both pause and stop actions from the parent
+  onMute, // Added to handle mute/unmute control
   isPlaying = false,
-  isMuted = false,
+  isMuted = false, // External mute state
 }: SongCardProps) {
   const [isHovering, setIsHovering] = useState(false)
   const [localMuteState, setLocalMuteState] = useState(isMuted)
+  // Reflects the actual playback state (playing or not)
   const [localPlayState, setLocalPlayState] = useState(isPlaying)
+  // Indicates if the stop button was the last action causing non-play state
   const [isStopped, setIsStopped] = useState(false)
+  // Indicates if the cancel button was the last action causing non-play state
   const [isCanceled, setIsCanceled] = useState(false)
-
-  // Sync local state with props
+  
+  // Sync local state with the isPlaying prop from parent
   useEffect(() => {
     setLocalPlayState(isPlaying)
-    // Reset control states when playback starts
+    // If the parent indicates playback started, reset stopped/canceled states
     if (isPlaying) {
       setIsStopped(false)
       setIsCanceled(false)
     }
-  }, [isPlaying])
+    // If the parent indicates playback stopped, and it wasn't due to local stop/cancel,
+    // treat it as a pause (don't set isStopped or isCanceled)
+    else if (!isStopped && !isCanceled) {
+       // No explicit action needed here, localPlayState is already set to false
+    }
+  }, [isPlaying]) // Removed isStopped, isCanceled dependency to avoid loops
 
+  // Sync local mute state with parent
   useEffect(() => {
-    setLocalMuteState(isMuted)
-  }, [isMuted])
-
-  const handlePlayPause = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    e.preventDefault()
+    setLocalMuteState(isMuted);
+  }, [isMuted]);
+  
+  const handleMute = (e: React.MouseEvent) => {
+    // Prevent the event from bubbling up to parent elements
+    e.stopPropagation();
+    e.preventDefault();
     
-    if (localPlayState) {
-      onStop?.()
-      setLocalPlayState(false)
+    // Only call the external mute handler if this is the currently playing song
+    if (onMute) {
+      onMute(); // Let the parent handle the actual muting
     } else {
-      onPlay()
-      setLocalPlayState(true)
-      setIsStopped(false)
-      setIsCanceled(false)
+      // For non-playing songs, just update local state
+      setLocalMuteState(!localMuteState);
     }
   }
-
-  const handleStop = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    e.preventDefault()
+  
+  const handlePlayPause = (e: React.MouseEvent) => {
+    // Prevent the event from bubbling up to parent elements
+    e.stopPropagation();
+    e.preventDefault();
     
-    onStop?.()
-    setLocalPlayState(false)
-    setIsStopped(true)
-    setIsCanceled(false)
+    if (localPlayState) {
+      // Currently playing -> Pause
+      onStop?.() // Request stop/pause from parent
+      setLocalPlayState(false)
+      // Keep isStopped and isCanceled as they are (it's just a pause)
+    } else {
+      // Currently paused/stopped/canceled -> Play
+      onPlay() // Request play from parent
+      setLocalPlayState(true)
+      setIsStopped(false) // Reset stopped state
+      setIsCanceled(false) // Reset canceled state
+    }
+  }
+  
+  const handleStop = (e: React.MouseEvent) => {
+    // Prevent the event from bubbling up to parent elements
+    e.stopPropagation();
+    e.preventDefault();
+    
+    // Only act if playing or if it's currently stopped but hovered 
+    if (localPlayState || isStopped) { 
+        onStop?.() // Request stop from parent
+        setLocalPlayState(false)
+        setIsStopped(true) // Mark as explicitly stopped
+        setIsCanceled(false) // Ensure not marked as canceled
+    }
   }
 
   const handleCancel = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    e.preventDefault()
+    // Prevent the event from bubbling up to parent elements
+    e.stopPropagation();
+    e.preventDefault();
     
-    onStop?.()
-    setLocalPlayState(false)
-    setIsStopped(false)
-    setIsCanceled(true)
+     // Only act if playing, paused, stopped, or hovered
+     if (localPlayState || isStopped || isHovering) { 
+        onStop?.() // Request stop from parent
+        setLocalPlayState(false)
+        setIsStopped(false) // Ensure not marked as stopped
+        setIsCanceled(true) // Mark as explicitly canceled: This hides controls on hover
+     }
   }
 
-  const handleMute = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    e.preventDefault()
-    
-    if (onMute) {
-      onMute()
-    }
-    setLocalMuteState(!localMuteState)
-  }
-
-  // Control visibility logic
-  const showControls = localPlayState || (isHovering && !isCanceled)
-  const showCanceledPlayButton = isCanceled && isHovering
+  // Determine if the main controls should be visible.
+  // Show controls if:
+  // 1. The song is currently playing (localPlayState is true)
+  // OR
+  // 2. The card is being hovered AND it has not been explicitly canceled (!isCanceled).
+  // Clicking Stop sets isCanceled to false, so controls remain visible on hover.
+  // Clicking Cancel sets isCanceled to true, so controls hide on hover.
+  const showControls = localPlayState || (isHovering && !isCanceled);
+  
+  // Determine if the separate play button (for canceled state) should be shown
+  const showCanceledPlayButton = isCanceled && isHovering;
 
   return (
     <motion.div

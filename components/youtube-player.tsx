@@ -89,19 +89,13 @@ export const YouTubePlayer = forwardRef<{
           // When resuming, first seek to the stored position
           const resumePos = pausedAtRef.current[videoId] || 0;
           
-          // First pause to ensure clean state
-          player.pauseVideo();
+          // Directly seek to the position and play
+          player.seekTo(resumePos, true);
           
-          // Use a sequence of operations with small delays
+          // Use a very short delay to ensure seeking completes
           setTimeout(() => {
-            if (!player) return;
-            player.seekTo(resumePos, true);
-            
-            setTimeout(() => {
-              if (!player) return;
-              player.playVideo();
-            }, 50);
-          }, 50);
+            if (player) player.playVideo();
+          }, 10);
         }
       } catch (error) {
         console.error("Error toggling play:", error);
@@ -305,49 +299,35 @@ export const YouTubePlayer = forwardRef<{
     if (!player || !isReady || !videoId) return;
     
     try {
-      // Always start by stopping any current playback
-      player.stopVideo();
+      // Preserve current play state
+      const wasPlaying = isPlaying;
       
-      // Small delay to ensure player is ready
-      setTimeout(() => {
-        if (!player) return;
-        
-        // Get any saved position for this video
-        const resumePos = pausedAtRef.current[videoId] || 0;
-        
-        // Load new video without autoplay
-        player.cueVideoById({
-          videoId: videoId,
-          startSeconds: resumePos
-        });
-        
-        // After loading, play if needed
-        if (autoplay) {
-          setTimeout(() => {
-            if (player) {
-              player.playVideo();
-            }
-          }, 100);
-        }
-        
-        // Apply mute state
-        if (isMuted) {
-          player.mute();
-        } else {
-          player.unMute();
-        }
-      }, 50);
+      // Get any saved position for this video
+      const resumePos = pausedAtRef.current[videoId] || 0;
+      
+      // Load new video
+      player.loadVideoById({
+        videoId: videoId,
+        startSeconds: resumePos
+      });
+      
+      // If we weren't playing, pause immediately after loading
+      if (!wasPlaying) {
+        setTimeout(() => {
+          if (player) player.pauseVideo();
+        }, 10);
+      }
+      
+      // Apply current mute state
+      if (isMuted) {
+        player.mute();
+      } else {
+        player.unMute();
+      }
     } catch (error) {
       console.error("Error loading video:", error);
     }
-  }, [videoId, isReady, player, autoplay, isMuted]);
-
-  // Clean up timeUpdateInterval on unmount or player change
-  useEffect(() => {
-    return () => {
-      clearTimeUpdateInterval();
-    };
-  }, [clearTimeUpdateInterval]);
+  }, [videoId, isReady, player, isPlaying]);
 
   return (
     <div style={{ display: 'none' }} className="plyr-youtube">
