@@ -49,6 +49,10 @@ export const YouTubePlayer = forwardRef<{
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
   const [isReady, setIsReady] = useState(false)
+  const [isBuffering, setIsBuffering] = useState(false)
+  
+  // Track if we're attempting to resume playback
+  const resumingRef = useRef(false)
   
   // Read the saved position from our cache if available, or start at 0
   const [savedTime, setSavedTime] = useState(() => videoPositions.get(videoId) || 0)
@@ -67,6 +71,11 @@ export const YouTubePlayer = forwardRef<{
 
   // Function to safely update the saved position both in state and our cache map
   const updateSavedPosition = useCallback((videoId: string, position: number) => {
+    // Avoid negative or invalid positions
+    if (position < 0 || isNaN(position)) {
+      position = 0;
+    }
+    
     // Save to our persistent map
     videoPositions.set(videoId, position);
     
@@ -87,15 +96,26 @@ export const YouTubePlayer = forwardRef<{
             updateSavedPosition(videoId, currentPos);
             player.pauseVideo();
           } else {
+            // Mark that we're attempting to resume
+            resumingRef.current = true;
+            
             // Get the current saved position for this video
             const resumePosition = videoPositions.get(videoId) || 0;
             
             // Resume from where we left off
             player.seekTo(resumePosition, true);
-            player.playVideo();
+            
+            // Small delay before playing to avoid freezing
+            setTimeout(() => {
+              if (player) {
+                player.playVideo();
+              }
+              resumingRef.current = false;
+            }, 50);
           }
         } catch (error) {
-          console.error("Error toggling play state:", error)
+          console.error("Error toggling play state:", error);
+          resumingRef.current = false;
         }
       }
     },
@@ -160,26 +180,33 @@ export const YouTubePlayer = forwardRef<{
     if (player && isReady) {
       timeUpdateInterval.current = setInterval(() => {
         try {
+          // Don't update during certain operations
+          if (resumingRef.current) return;
+          
           if (player.getCurrentTime && player.getDuration) {
-            const currentTime = player.getCurrentTime() || 0
-            const duration = player.getDuration() || 0
-            setCurrentTime(currentTime)
+            const currentTime = player.getCurrentTime() || 0;
+            const duration = player.getDuration() || 0;
             
-            // Update the saved position for the current video as playback continues
-            if (isPlaying) {
-              updateSavedPosition(currentVideoIdRef.current, currentTime);
+            // Avoid updating if the values haven't changed
+            if (Math.abs(currentTime - savedTime) > 0.5) {
+              setCurrentTime(currentTime);
+              
+              // Only update saved position when playing normally
+              if (isPlaying && !isBuffering) {
+                updateSavedPosition(currentVideoIdRef.current, currentTime);
+              }
             }
             
-            if (duration > 0) {
-              setDuration(duration)
+            if (duration > 0 && duration !== Infinity) {
+              setDuration(duration);
             }
           }
         } catch (error) {
           console.error("Error updating time:", error)
         }
-      }, 100) // Update more frequently for smoother progress
+      }, 250); // Reduced frequency to avoid potential race conditions
     }
-  }, [player, isReady, isPlaying, updateSavedPosition])
+  }, [player, isReady, isPlaying, isBuffering, savedTime, updateSavedPosition, clearTimeUpdateInterval])
 
   // Load YouTube API
   useEffect(() => {
@@ -225,31 +252,32 @@ export const YouTubePlayer = forwardRef<{
           resumePosition = 0;
         }
         
-        // Load the video
-        player.loadVideoById({
+        // Load the video with the proper position
+        player.cueVideoById({
           videoId: videoId,
           startSeconds: resumePosition
         });
         
-        // Apply current play/pause state
-        if (isPlaying) {
-          player.playVideo()
-        } else {
-          player.pauseVideo()
-        }
-        
-        // Apply current mute state
-        if (isMuted) {
-          player.mute()
-        } else {
-          player.unMute()
-        }
+        // Apply play state with slight delay to avoid race conditions
+        setTimeout(() => {
+          if (!player) return;
+          
+          // Apply current play/pause state
+          if (isPlaying) {
+            player.playVideo()
+          } else {
+            player.pauseVideo()
+          }
+          
+          // Apply current mute state
+          if (isMuted) {
+            player.mute()
+          } else {
+            player.unMute()
+          }
+        }, 50);
         
         setCurrentTime(resumePosition);
-        const newDuration = player.getDuration() || 0
-        if (newDuration > 0) {
-          setDuration(newDuration)
-        }
       } catch (error) {
         console.error("Error loading video:", error)
       }
@@ -327,7 +355,10 @@ export const YouTubePlayer = forwardRef<{
       }
       
       if (autoplay) {
-        event.target.playVideo()
+        // Small delay before playing to ensure the player is fully ready
+        setTimeout(() => {
+          event.target.playVideo();
+        }, 100);
       }
       
       // Start time updates immediately
@@ -340,28 +371,30 @@ export const YouTubePlayer = forwardRef<{
   const onPlayerStateChange = (event: any) => {
     try {
       if (event.data === window.YT.PlayerState.PLAYING) {
-        setIsPlaying(true)
-        onPlayStateChange?.(true)
-        startTimeUpdate()
+        setIsBuffering(false);
+        setIsPlaying(true);
+        onPlayStateChange?.(true);
+        startTimeUpdate();
       } else if (event.data === window.YT.PlayerState.PAUSED) {
-        // Save current position when paused
-        if (player && player.getCurrentTime) {
-          const currentPos = player.getCurrentTime() || 0
+        // Don't update position if we're in the process of resuming
+        if (!resumingRef.current && player && player.getCurrentTime) {
+          const currentPos = player.getCurrentTime() || 0;
           updateSavedPosition(currentVideoIdRef.current, currentPos);
         }
-        setIsPlaying(false)
-        onPlayStateChange?.(false)
-        // Keep updating time even when paused
-        startTimeUpdate()
+        
+        setIsPlaying(false);
+        onPlayStateChange?.(false);
+        startTimeUpdate();
       } else if (event.data === window.YT.PlayerState.ENDED) {
         updateSavedPosition(currentVideoIdRef.current, 0);
-        setIsPlaying(false)
-        onPlayStateChange?.(false)
-        clearTimeUpdateInterval()
-        if (onEnded) onEnded()
+        setIsPlaying(false);
+        onPlayStateChange?.(false);
+        clearTimeUpdateInterval();
+        if (onEnded) onEnded();
       } else if (event.data === window.YT.PlayerState.BUFFERING) {
+        setIsBuffering(true);
         // Keep updating time during buffering
-        startTimeUpdate()
+        startTimeUpdate();
       }
     } catch (error) {
       console.error("Error in onPlayerStateChange:", error)
