@@ -29,20 +29,13 @@ export default function PlaylistPage({ params, searchParams }: PageProps) {
   const [isPlayerPlaying, setIsPlayerPlaying] = useState(false)
   const [isPlayerMuted, setIsPlayerMuted] = useState(false)
   const [isAutoPlayingNext, setIsAutoPlayingNext] = useState(false)
-  const songTransitionTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
     const loadPlaylist = async () => {
       await fetchPlaylistDetails(playlistId)
     }
     loadPlaylist()
-    return () => {
-      reset()
-      // Clear any pending timeouts on unmount
-      if (songTransitionTimeoutRef.current) {
-        clearTimeout(songTransitionTimeoutRef.current)
-      }
-    }
+    return () => reset()
   }, [playlistId, fetchPlaylistDetails, reset])
 
   const handlePlaySong = (index: number) => {
@@ -84,22 +77,10 @@ export default function PlaylistPage({ params, searchParams }: PageProps) {
     if (currentSongIndex !== null && currentSongIndex < songs.length - 1) {
       // Set flag to indicate we're auto-transitioning to next song
       setIsAutoPlayingNext(true)
-      
-      // Clear any existing timeout
-      if (songTransitionTimeoutRef.current) {
-        clearTimeout(songTransitionTimeoutRef.current)
-      }
-      
       // Switch to the next song
       setCurrentSongIndex(currentSongIndex + 1)
-      
       // Ensure we're still in playing state
       setIsPlayerPlaying(true)
-      
-      // Clear the autoplay flag after a delay to ensure the transition completes
-      songTransitionTimeoutRef.current = setTimeout(() => {
-        setIsAutoPlayingNext(false)
-      }, 1000)
     } else {
       // If we're at the last song, stop playing
       setIsPlayerPlaying(false)
@@ -108,11 +89,6 @@ export default function PlaylistPage({ params, searchParams }: PageProps) {
 
   const handleNextSong = () => {
     if (currentSongIndex !== null && currentSongIndex < songs.length - 1) {
-      // Clear any existing timeout
-      if (songTransitionTimeoutRef.current) {
-        clearTimeout(songTransitionTimeoutRef.current)
-      }
-      
       setCurrentSongIndex(currentSongIndex + 1)
       setIsPlayerPlaying(true)
       setIsAutoPlayingNext(false)
@@ -121,11 +97,6 @@ export default function PlaylistPage({ params, searchParams }: PageProps) {
 
   const handlePreviousSong = () => {
     if (currentSongIndex !== null && currentSongIndex > 0) {
-      // Clear any existing timeout
-      if (songTransitionTimeoutRef.current) {
-        clearTimeout(songTransitionTimeoutRef.current)
-      }
-      
       setCurrentSongIndex(currentSongIndex - 1)
       setIsPlayerPlaying(true)
       setIsAutoPlayingNext(false)
@@ -143,20 +114,6 @@ export default function PlaylistPage({ params, searchParams }: PageProps) {
   const handleMuteStateChange = (isMuted: boolean) => {
     setIsPlayerMuted(isMuted)
   }
-
-  // Listen for currentSongIndex changes to manage autoplay state
-  useEffect(() => {
-    if (currentSongIndex !== null) {
-      // If not auto-playing next and we're not playing, don't start 
-      // (this means we're manually changing songs but don't want to autoplay)
-      if (!isAutoPlayingNext && !isPlayerPlaying) {
-        return
-      }
-      
-      // Otherwise, ensure playing state is set to true during transitions
-      setIsPlayerPlaying(true)
-    }
-  }, [currentSongIndex, isAutoPlayingNext, isPlayerPlaying])
 
   const currentSong = currentSongIndex !== null ? songs[currentSongIndex] : null
 
