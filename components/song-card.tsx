@@ -44,6 +44,14 @@ export function SongCard({
     }
   }, [isPlaying])
 
+  // Reset cancelled and controls state when song stops or changes
+  useEffect(() => {
+    if (!isPlaying) {
+      setIsCancelled(false)
+      setShowControls(true)
+    }
+  }, [isPlaying])
+
   const handleVinylClick = () => {
     if (!showControls) {
       setShowControls(true)
@@ -57,11 +65,7 @@ export function SongCard({
     if (onStop) {
       onStop()
     }
-    // Only hide controls and set cancelled state if the song is actually playing
-    if (isPlaying) {
-      setShowControls(false)
-      setIsCancelled(true)
-    }
+    // No need to set states here since the isPlaying effect will handle it
   }
 
   return (

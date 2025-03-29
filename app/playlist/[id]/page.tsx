@@ -65,10 +65,9 @@ function PlaylistPageContent({ params }: PageProps) {
       playerRef.current.pause()
       setIsPlayerPlaying(false)
       setIsPlayerMuted(false)
-      // Only reset current song index after a short delay to prevent flickering
-      setTimeout(() => {
-        setCurrentSongIndex(null)
-      }, 100)
+      setCurrentSongIndex(null)
+      // Refetch playlist details to reset all state
+      fetchPlaylistDetails(playlistId)
     }
   }
 
