@@ -13,6 +13,7 @@ interface SongCardProps {
   thumbnailUrl?: string
   duration?: string
   onPlay: () => void
+  onStop?: () => void
   onMute?: () => void
   isPlaying?: boolean
   isMuted?: boolean
@@ -26,6 +27,7 @@ export function SongCard({
   thumbnailUrl,
   duration,
   onPlay,
+  onStop,
   onMute,
   isPlaying = false,
   isMuted = false,
@@ -49,6 +51,15 @@ export function SongCard({
       setIsCancelled(false)
     }
     onPlay()
+  }
+
+  const handleCancel = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setShowControls(false)
+    setIsCancelled(true)
+    if (onStop) {
+      onStop()
+    }
   }
 
   return (
@@ -112,7 +123,8 @@ export function SongCard({
               </p>
             )}
 
-            {isPlaying && (
+            {/* Wave visualizer - Only show when playing and not cancelled */}
+            {isPlaying && !isCancelled && (
               <div className="mt-2">
                 <div className="flex gap-1">
                   {[1, 2, 3, 4, 5].map((i) => (
@@ -204,7 +216,7 @@ export function SongCard({
           {/* Play button on hover when controls are hidden */}
           {!showControls && isHovering && !isCancelled && (
             <motion.div
-              className="absolute inset-0 z-20 flex items-center justify-center bg-black/30 rounded-full sm:hidden"
+              className="absolute inset-0 z-20 flex items-center justify-center bg-black/30 rounded-full hidden sm:flex"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.2 }}
@@ -268,11 +280,7 @@ export function SongCard({
                 )}
 
                 <motion.button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    setShowControls(false)
-                    setIsCancelled(true)
-                  }}
+                  onClick={handleCancel}
                   className="neobrutalist-button !p-[3px] sm:!p-1.5 bg-white/90 hover:bg-red-500 hover:text-white z-10"
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}

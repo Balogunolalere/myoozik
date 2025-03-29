@@ -57,6 +57,15 @@ function PlaylistPageContent({ params }: PageProps) {
     }
   }
 
+  const handleStopSong = () => {
+    if (playerRef.current) {
+      playerRef.current.pause()
+      // Reset the player
+      setCurrentSongIndex(null)
+      setIsPlayerPlaying(false)
+    }
+  }
+
   const handleToggleMute = () => {
     playerRef.current?.toggleMute()
   }
@@ -246,6 +255,7 @@ function PlaylistPageContent({ params }: PageProps) {
                         thumbnailUrl={song.thumbnail_url}
                         duration={song.duration}
                         onPlay={() => handlePlaySong(index)}
+                        onStop={currentSongIndex === index ? handleStopSong : undefined}
                         onMute={currentSongIndex === index ? handleToggleMute : undefined}
                         isPlaying={currentSongIndex === index && isPlayerPlaying}
                         isMuted={currentSongIndex === index && isPlayerMuted}
