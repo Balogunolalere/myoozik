@@ -27,6 +27,7 @@ export default function PlaylistPage({ params, searchParams }: PageProps) {
   const { reset } = useInteractionStore()
   const playerRef = useRef<any>(null)
   const [isPlayerPlaying, setIsPlayerPlaying] = useState(false)
+  const [isPlayerMuted, setIsPlayerMuted] = useState(false)
 
   useEffect(() => {
     const loadPlaylist = async () => {
@@ -61,6 +62,13 @@ export default function PlaylistPage({ params, searchParams }: PageProps) {
       setCurrentSongIndex(null)
     }
   }
+  
+  const handleToggleMute = () => {
+    if (playerRef.current?.toggleMute) {
+      playerRef.current.toggleMute()
+      setIsPlayerMuted(!isPlayerMuted)
+    }
+  }
 
   const handleSongEnded = () => {
     if (currentSongIndex !== null && currentSongIndex < songs.length - 1) {
@@ -86,6 +94,10 @@ export default function PlaylistPage({ params, searchParams }: PageProps) {
 
   const handlePlayStateChange = (isPlaying: boolean) => {
     setIsPlayerPlaying(isPlaying)
+  }
+  
+  const handleMuteStateChange = (isMuted: boolean) => {
+    setIsPlayerMuted(isMuted)
   }
 
   const currentSong = currentSongIndex !== null ? songs[currentSongIndex] : null
@@ -144,6 +156,7 @@ export default function PlaylistPage({ params, searchParams }: PageProps) {
           hasNext={currentSongIndex !== null && currentSongIndex < songs.length - 1}
           hasPrevious={currentSongIndex !== null && currentSongIndex > 0}
           onPlayStateChange={handlePlayStateChange}
+          onMuteStateChange={handleMuteStateChange}
         />
       )}
 
@@ -259,7 +272,9 @@ export default function PlaylistPage({ params, searchParams }: PageProps) {
                         duration={song.duration}
                         onPlay={() => handlePlaySong(index)}
                         onStop={currentSongIndex === index ? handleStopSong : handleCancelSong}
+                        onMute={currentSongIndex === index ? handleToggleMute : undefined}
                         isPlaying={currentSongIndex === index && isPlayerPlaying}
+                        isMuted={currentSongIndex === index && isPlayerMuted}
                       />
                     </motion.div>
                   ))}

@@ -14,7 +14,9 @@ interface SongCardProps {
   duration?: string
   onPlay: () => void
   onStop?: () => void
+  onMute?: () => void
   isPlaying?: boolean
+  isMuted?: boolean
 }
 
 export function SongCard({
@@ -26,10 +28,12 @@ export function SongCard({
   duration,
   onPlay,
   onStop, // Assuming onStop handles both pause and stop actions from the parent
+  onMute, // Added to handle mute/unmute control
   isPlaying = false,
+  isMuted = false, // External mute state
 }: SongCardProps) {
   const [isHovering, setIsHovering] = useState(false)
-  const [isMuted, setIsMuted] = useState(false)
+  const [localMuteState, setLocalMuteState] = useState(isMuted)
   // Reflects the actual playback state (playing or not)
   const [localPlayState, setLocalPlayState] = useState(isPlaying)
   // Indicates if the stop button was the last action causing non-play state
@@ -52,10 +56,21 @@ export function SongCard({
     }
   }, [isPlaying]) // Removed isStopped, isCanceled dependency to avoid loops
 
+  // Sync local mute state with parent
+  useEffect(() => {
+    setLocalMuteState(isMuted);
+  }, [isMuted]);
+  
   const handleMute = (e: React.MouseEvent) => {
     e.stopPropagation()
-    setIsMuted(!isMuted)
-    // Add logic here to actually mute/unmute the player if needed
+    
+    // Only call the external mute handler if this is the currently playing song
+    if (onMute) {
+      onMute(); // Let the parent handle the actual muting
+    } else {
+      // For non-playing songs, just update local state
+      setLocalMuteState(!localMuteState);
+    }
   }
   
   const handlePlayPause = (e: React.MouseEvent) => {
@@ -252,9 +267,9 @@ export function SongCard({
                     className="neobrutalist-button !p-[3px] sm:!p-1.5 bg-white/90 hover:bg-[#FD6C6C]"
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.9 }}
-                    aria-label={isMuted ? "Unmute" : "Mute"}
+                    aria-label={localMuteState ? "Unmute" : "Mute"}
                   >
-                    {isMuted ? <VolumeX className="h-2.5 w-2.5 sm:h-4 sm:w-4" /> : <Volume2 className="h-2.5 w-2.5 sm:h-4 sm:w-4" />}
+                    {localMuteState ? <VolumeX className="h-2.5 w-2.5 sm:h-4 sm:w-4" /> : <Volume2 className="h-2.5 w-2.5 sm:h-4 sm:w-4" />}
                   </motion.button>
                   <motion.button
                     onClick={handleStop}

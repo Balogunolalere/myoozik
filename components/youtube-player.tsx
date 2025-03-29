@@ -14,6 +14,7 @@ interface YouTubePlayerProps {
   hasNext?: boolean
   hasPrevious?: boolean
   onPlayStateChange?: (isPlaying: boolean) => void
+  onMuteStateChange?: (isMuted: boolean) => void
 }
 
 declare global {
@@ -26,7 +27,8 @@ declare global {
 export const YouTubePlayer = forwardRef<{ 
   togglePlay: () => void, 
   stop: () => void,
-  cancel: () => void 
+  cancel: () => void,
+  toggleMute: () => void
 }, YouTubePlayerProps>(({
   videoId,
   onEnded,
@@ -36,6 +38,7 @@ export const YouTubePlayer = forwardRef<{
   hasNext = false,
   hasPrevious = false,
   onPlayStateChange,
+  onMuteStateChange
 }, ref) => {
   const [player, setPlayer] = useState<any>(null)
   const [isPlaying, setIsPlaying] = useState(autoplay)
@@ -97,6 +100,23 @@ export const YouTubePlayer = forwardRef<{
           console.error("Error canceling video:", error)
         }
       }
+    },
+    toggleMute: () => {
+      if (player && isReady) {
+        try {
+          if (isMuted) {
+            player.unMute();
+            setIsMuted(false);
+            onMuteStateChange?.(false);
+          } else {
+            player.mute();
+            setIsMuted(true);
+            onMuteStateChange?.(true);
+          }
+        } catch (error) {
+          console.error("Error toggling mute state:", error)
+        }
+      }
     }
   }))
 
@@ -116,10 +136,8 @@ export const YouTubePlayer = forwardRef<{
             const currentTime = player.getCurrentTime() || 0
             const duration = player.getDuration() || 0
             setCurrentTime(currentTime)
-            // Update savedTime continuously during playback
-            if (isPlaying) {
-              setSavedTime(currentTime)
-            }
+            // Update savedTime continuously during playback to always have the latest position
+            setSavedTime(currentTime)
             if (duration > 0) {
               setDuration(duration)
             }
@@ -129,7 +147,7 @@ export const YouTubePlayer = forwardRef<{
         }
       }, 100) // Update more frequently for smoother progress
     }
-  }, [player, isReady, isPlaying])
+  }, [player, isReady])
 
   // Load YouTube API
   useEffect(() => {
@@ -155,9 +173,11 @@ export const YouTubePlayer = forwardRef<{
     }
   }, [])
 
+  // Handle video ID changes
   useEffect(() => {
     if (player && isReady && videoId) {
       try {
+        // When video ID changes, either load at saved time or from start
         if (savedTime > 0) {
           player.loadVideoById({
             videoId: videoId,
@@ -166,20 +186,33 @@ export const YouTubePlayer = forwardRef<{
         } else {
           player.loadVideoById(videoId)
         }
+        
+        // Apply current play/pause state
         if (isPlaying) {
           player.playVideo()
         } else {
           player.pauseVideo()
         }
+        
+        // Apply current mute state
+        if (isMuted) {
+          player.mute()
+        } else {
+          player.unMute()
+        }
+        
         setCurrentTime(savedTime)
-        const newDuration = player.getDuration()
-        setDuration(newDuration)
+        const newDuration = player.getDuration() || 0
+        if (newDuration > 0) {
+          setDuration(newDuration)
+        }
       } catch (error) {
         console.error("Error loading video:", error)
       }
     }
   }, [videoId, isReady])
 
+  // Handle mute state changes
   useEffect(() => {
     if (player && isReady) {
       try {
@@ -188,11 +221,13 @@ export const YouTubePlayer = forwardRef<{
         } else {
           player.unMute()
         }
+        // Notify parent of mute state change
+        onMuteStateChange?.(isMuted);
       } catch (error) {
         console.error("Error updating mute state:", error)
       }
     }
-  }, [isMuted, player, isReady])
+  }, [isMuted, player, isReady, onMuteStateChange])
 
   const initializePlayer = () => {
     if (!playerRef.current) return
@@ -234,9 +269,16 @@ export const YouTubePlayer = forwardRef<{
       setIsReady(true)
       const duration = event.target.getDuration() || 0
       setDuration(duration)
+      
+      // Check if player should be muted initially
+      if (isMuted) {
+        event.target.mute();
+      }
+      
       if (autoplay) {
         event.target.playVideo()
       }
+      
       // Start time updates immediately
       startTimeUpdate()
     } catch (error) {
@@ -302,15 +344,17 @@ export const YouTubePlayer = forwardRef<{
         if (isMuted) {
           player.unMute()
           setIsMuted(false)
+          onMuteStateChange?.(false)
         } else {
           player.mute()
           setIsMuted(true)
+          onMuteStateChange?.(true)
         }
       } catch (error) {
         console.error("Error toggling mute state:", error)
       }
     }
-  }, [player, isMuted, isReady])
+  }, [player, isMuted, isReady, onMuteStateChange])
 
   const handleSeek = useCallback((value: number[]) => {
     const seekTime = value[0]
