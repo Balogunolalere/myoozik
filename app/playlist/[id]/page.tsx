@@ -33,18 +33,12 @@ function PlaylistPageContent({ params }: PageProps) {
   const playerRef = useRef<any>(null)
   const [isPlayerPlaying, setIsPlayerPlaying] = useState(false)
   const [isPlayerMuted, setIsPlayerMuted] = useState(false)
-  const [isAutoPlayingNext, setIsAutoPlayingNext] = useState(false)
 
   useEffect(() => {
-    const loadPlaylist = async () => {
-      if (!playlistId) return
-      await fetchPlaylistDetails(playlistId)
-    }
-    loadPlaylist()
+    fetchPlaylistDetails(playlistId)
     return () => {
-      // Cleanup player on unmount
-      if (playerRef.current?.cancel) {
-        playerRef.current.cancel()
+      if (playerRef.current) {
+        playerRef.current.pause()
       }
       reset()
     }
@@ -52,80 +46,29 @@ function PlaylistPageContent({ params }: PageProps) {
 
   const handlePlaySong = (index: number) => {
     if (currentSongIndex === index) {
-      // If clicking the same song, just toggle play/pause
-      if (playerRef.current?.togglePlay) {
-        playerRef.current.togglePlay()
+      if (isPlayerPlaying) {
+        playerRef.current?.pause()
+      } else {
+        playerRef.current?.play()
       }
     } else {
-      // If we have a current song playing, cancel it first
-      if (currentSongIndex !== null && playerRef.current?.cancel) {
-        playerRef.current.cancel()
-      }
-      // Small delay to ensure cleanup
-      setTimeout(() => {
-        setCurrentSongIndex(index)
-        setIsPlayerPlaying(true)
-        setIsAutoPlayingNext(false)
-      }, 50)
+      setCurrentSongIndex(index)
+      setIsPlayerPlaying(true)
     }
   }
 
-  const handleStopSong = () => {
-    if (playerRef.current?.stop) {
-      playerRef.current.stop()
-      setIsPlayerPlaying(false)
-    }
-  }
-
-  const handleCancelSong = () => {
-    if (playerRef.current?.cancel) {
-      playerRef.current.cancel()
-      setCurrentSongIndex(null)
-      setIsPlayerPlaying(false)
-    }
-  }
-  
   const handleToggleMute = () => {
-    if (playerRef.current?.toggleMute) {
-      playerRef.current.toggleMute()
-      setIsPlayerMuted(!isPlayerMuted)
-    }
+    playerRef.current?.toggleMute()
   }
 
   const handleSongEnded = () => {
-    // Check if there's a next song available
-    if (currentSongIndex !== null && currentSongIndex < songs.length - 1) {
-      setIsAutoPlayingNext(true)
-      // Switch to next song with a small delay
-      setTimeout(() => {
-        setCurrentSongIndex(currentSongIndex + 1)
-        setIsPlayerPlaying(true)
-      }, 50)
-    } else {
-      // If we're at the last song, stop playing
-      setIsPlayerPlaying(false)
-      setCurrentSongIndex(null)
-    }
-  }
-
-  const handleNextSong = () => {
     if (currentSongIndex !== null && currentSongIndex < songs.length - 1) {
       setCurrentSongIndex(currentSongIndex + 1)
       setIsPlayerPlaying(true)
-      setIsAutoPlayingNext(false)
+    } else {
+      setIsPlayerPlaying(false)
+      setCurrentSongIndex(null)
     }
-  }
-
-  const handlePreviousSong = () => {
-    if (currentSongIndex !== null && currentSongIndex > 0) {
-      setCurrentSongIndex(currentSongIndex - 1)
-      setIsPlayerPlaying(true)
-      setIsAutoPlayingNext(false)
-    }
-  }
-
-  const handleRatingSubmit = async () => {
-    await fetchPlaylistDetails(playlistId)
   }
 
   const handlePlayStateChange = (isPlaying: boolean) => {
@@ -186,11 +129,7 @@ function PlaylistPageContent({ params }: PageProps) {
           ref={playerRef}
           videoId={currentSong.youtube_video_id}
           onEnded={handleSongEnded}
-          autoplay={isPlayerPlaying || isAutoPlayingNext}
-          onNext={handleNextSong}
-          onPrevious={handlePreviousSong}
-          hasNext={currentSongIndex !== null && currentSongIndex < songs.length - 1}
-          hasPrevious={currentSongIndex !== null && currentSongIndex > 0}
+          autoplay={isPlayerPlaying}
           onPlayStateChange={handlePlayStateChange}
           onMuteStateChange={handleMuteStateChange}
         />
@@ -271,7 +210,7 @@ function PlaylistPageContent({ params }: PageProps) {
                   initialRating={0}
                   totalRatings={currentPlaylist?.total_ratings || 0}
                   averageRating={currentPlaylist?.averageRating || 0}
-                  onRatingSubmit={handleRatingSubmit}
+                  onRatingSubmit={() => fetchPlaylistDetails(playlistId)}
                 />
               </div>
             </motion.div>
@@ -307,7 +246,6 @@ function PlaylistPageContent({ params }: PageProps) {
                         thumbnailUrl={song.thumbnail_url}
                         duration={song.duration}
                         onPlay={() => handlePlaySong(index)}
-                        onStop={currentSongIndex === index ? handleStopSong : handleCancelSong}
                         onMute={currentSongIndex === index ? handleToggleMute : undefined}
                         isPlaying={currentSongIndex === index && isPlayerPlaying}
                         isMuted={currentSongIndex === index && isPlayerMuted}
