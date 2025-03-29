@@ -62,7 +62,9 @@ export function SongCard({
   }, [isMuted]);
   
   const handleMute = (e: React.MouseEvent) => {
-    e.stopPropagation()
+    // Prevent the event from bubbling up to parent elements
+    e.stopPropagation();
+    e.preventDefault();
     
     // Only call the external mute handler if this is the currently playing song
     if (onMute) {
@@ -74,7 +76,10 @@ export function SongCard({
   }
   
   const handlePlayPause = (e: React.MouseEvent) => {
-    e.stopPropagation()
+    // Prevent the event from bubbling up to parent elements
+    e.stopPropagation();
+    e.preventDefault();
+    
     if (localPlayState) {
       // Currently playing -> Pause
       onStop?.() // Request stop/pause from parent
@@ -90,7 +95,10 @@ export function SongCard({
   }
   
   const handleStop = (e: React.MouseEvent) => {
-    e.stopPropagation()
+    // Prevent the event from bubbling up to parent elements
+    e.stopPropagation();
+    e.preventDefault();
+    
     // Only act if playing or if it's currently stopped but hovered 
     if (localPlayState || isStopped) { 
         onStop?.() // Request stop from parent
@@ -101,7 +109,10 @@ export function SongCard({
   }
 
   const handleCancel = (e: React.MouseEvent) => {
-    e.stopPropagation()
+    // Prevent the event from bubbling up to parent elements
+    e.stopPropagation();
+    e.preventDefault();
+    
      // Only act if playing, paused, stopped, or hovered
      if (localPlayState || isStopped || isHovering) { 
         onStop?.() // Request stop from parent
@@ -241,18 +252,18 @@ export function SongCard({
 
           {/* Control overlay - Visibility depends on showControls */}
           <motion.div
-            className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-full" 
+            className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-full pointer-events-none" 
             initial={{ opacity: 0 }}
             animate={{ opacity: showControls ? 1 : 0 }} // Controls visibility
             transition={{ duration: 0.2 }}
           >
             {/* Conditional rendering inside ensures buttons don't exist when hidden */}
             {showControls && (
-              <div className="flex items-center gap-[2px] sm:gap-1">
+              <div className="flex items-center gap-[2px] sm:gap-1 pointer-events-auto">
                 {/* Play/Pause Button */}
                 <motion.button
                   onClick={handlePlayPause}
-                  className="neobrutalist-button !p-[3px] sm:!p-1.5 bg-white/90 hover:bg-[#FD6C6C]"
+                  className="neobrutalist-button !p-[3px] sm:!p-1.5 bg-white/90 hover:bg-[#FD6C6C] z-10"
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
                   aria-label={localPlayState ? "Pause song" : "Play song"}
@@ -264,7 +275,7 @@ export function SongCard({
                 <>
                   <motion.button
                     onClick={handleMute}
-                    className="neobrutalist-button !p-[3px] sm:!p-1.5 bg-white/90 hover:bg-[#FD6C6C]"
+                    className="neobrutalist-button !p-[3px] sm:!p-1.5 bg-white/90 hover:bg-[#FD6C6C] z-10"
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.9 }}
                     aria-label={localMuteState ? "Unmute" : "Mute"}
@@ -273,7 +284,7 @@ export function SongCard({
                   </motion.button>
                   <motion.button
                     onClick={handleStop}
-                    className="neobrutalist-button !p-[3px] sm:!p-1.5 bg-white/90 hover:bg-[#FD6C6C]"
+                    className="neobrutalist-button !p-[3px] sm:!p-1.5 bg-white/90 hover:bg-[#FD6C6C] z-10"
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.9 }}
                     aria-label="Stop playback"
@@ -282,7 +293,7 @@ export function SongCard({
                   </motion.button>
                   <motion.button
                     onClick={handleCancel}
-                    className="neobrutalist-button !p-[3px] sm:!p-1.5 bg-white/90 hover:bg-[#FD6C6C]"
+                    className="neobrutalist-button !p-[3px] sm:!p-1.5 bg-white/90 hover:bg-[#FD6C6C] z-10"
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.9 }}
                     aria-label="Cancel playback"
@@ -296,7 +307,7 @@ export function SongCard({
           
           {/* Separate Play Button Overlay - Visibility depends on showCanceledPlayButton */}
           <motion.div
-            className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-full" 
+            className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-full pointer-events-none" 
             initial={{ opacity: 0 }}
             animate={{ opacity: showCanceledPlayButton ? 1 : 0 }} // Controls visibility
             transition={{ duration: 0.2 }}
@@ -305,7 +316,7 @@ export function SongCard({
             {showCanceledPlayButton && (
               <motion.button
                 onClick={handlePlayPause} // Re-use handlePlayPause to start playing
-                className="neobrutalist-button !p-[3px] sm:!p-1.5 bg-white/90 hover:bg-[#FD6C6C]"
+                className="neobrutalist-button !p-[3px] sm:!p-1.5 bg-white/90 hover:bg-[#FD6C6C] z-10 pointer-events-auto"
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
                 aria-label="Play song"
