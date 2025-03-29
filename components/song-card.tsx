@@ -36,10 +36,11 @@ export function SongCard({
   const [showControls, setShowControls] = useState(true)
   const [isCancelled, setIsCancelled] = useState(false)
 
-  // Reset cancelled state when song starts playing
+  // Reset cancelled state when the song starts playing
   useEffect(() => {
     if (isPlaying) {
       setIsCancelled(false)
+      setShowControls(true)
     }
   }, [isPlaying])
 
