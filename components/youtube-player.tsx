@@ -305,35 +305,49 @@ export const YouTubePlayer = forwardRef<{
     if (!player || !isReady || !videoId) return;
     
     try {
-      // Preserve current play state
-      const wasPlaying = isPlaying;
+      // Always start by stopping any current playback
+      player.stopVideo();
       
-      // Get any saved position for this video
-      const resumePos = pausedAtRef.current[videoId] || 0;
-      
-      // Load new video
-      player.loadVideoById({
-        videoId: videoId,
-        startSeconds: resumePos
-      });
-      
-      // If we weren't playing, pause immediately after loading
-      if (!wasPlaying) {
-        setTimeout(() => {
-          if (player) player.pauseVideo();
-        }, 10);
-      }
-      
-      // Apply current mute state
-      if (isMuted) {
-        player.mute();
-      } else {
-        player.unMute();
-      }
+      // Small delay to ensure player is ready
+      setTimeout(() => {
+        if (!player) return;
+        
+        // Get any saved position for this video
+        const resumePos = pausedAtRef.current[videoId] || 0;
+        
+        // Load new video without autoplay
+        player.cueVideoById({
+          videoId: videoId,
+          startSeconds: resumePos
+        });
+        
+        // After loading, play if needed
+        if (autoplay) {
+          setTimeout(() => {
+            if (player) {
+              player.playVideo();
+            }
+          }, 100);
+        }
+        
+        // Apply mute state
+        if (isMuted) {
+          player.mute();
+        } else {
+          player.unMute();
+        }
+      }, 50);
     } catch (error) {
       console.error("Error loading video:", error);
     }
-  }, [videoId, isReady, player, isPlaying]);
+  }, [videoId, isReady, player, autoplay, isMuted]);
+
+  // Clean up timeUpdateInterval on unmount or player change
+  useEffect(() => {
+    return () => {
+      clearTimeUpdateInterval();
+    };
+  }, [clearTimeUpdateInterval]);
 
   return (
     <div style={{ display: 'none' }} className="plyr-youtube">
