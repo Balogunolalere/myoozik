@@ -24,6 +24,9 @@ declare global {
   }
 }
 
+// Store the last playing positions of all videos, persisted across component re-renders
+const videoPositions = new Map<string, number>();
+
 export const YouTubePlayer = forwardRef<{ 
   togglePlay: () => void, 
   stop: () => void,
@@ -46,10 +49,32 @@ export const YouTubePlayer = forwardRef<{
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
   const [isReady, setIsReady] = useState(false)
-  const [savedTime, setSavedTime] = useState(0)
+  
+  // Read the saved position from our cache if available, or start at 0
+  const [savedTime, setSavedTime] = useState(() => videoPositions.get(videoId) || 0)
+  
+  // Keep track of the current videoId for position tracking
+  const currentVideoIdRef = useRef(videoId);
+  
+  // Update the ref when videoId changes
+  useEffect(() => {
+    currentVideoIdRef.current = videoId;
+  }, [videoId]);
+  
   const playerRef = useRef<HTMLDivElement>(null)
   const timeUpdateInterval = useRef<NodeJS.Timeout | null>(null)
   const playerContainerId = useRef(`youtube-player-${Math.random().toString(36).substring(2, 9)}`)
+
+  // Function to safely update the saved position both in state and our cache map
+  const updateSavedPosition = useCallback((videoId: string, position: number) => {
+    // Save to our persistent map
+    videoPositions.set(videoId, position);
+    
+    // Only update state if this is the current video
+    if (videoId === currentVideoIdRef.current) {
+      setSavedTime(position);
+    }
+  }, []);
 
   // Expose methods through ref
   useImperativeHandle(ref, () => ({
@@ -59,11 +84,14 @@ export const YouTubePlayer = forwardRef<{
           if (isPlaying) {
             // Save the current time before pausing
             const currentPos = player.getCurrentTime() || 0;
-            setSavedTime(currentPos);
+            updateSavedPosition(videoId, currentPos);
             player.pauseVideo();
           } else {
+            // Get the current saved position for this video
+            const resumePosition = videoPositions.get(videoId) || 0;
+            
             // Resume from where we left off
-            player.seekTo(savedTime, true);
+            player.seekTo(resumePosition, true);
             player.playVideo();
           }
         } catch (error) {
@@ -74,7 +102,8 @@ export const YouTubePlayer = forwardRef<{
     stop: () => {
       if (player && isReady) {
         try {
-          setSavedTime(0);
+          // Reset saved position for this video
+          updateSavedPosition(videoId, 0);
           player.seekTo(0);
           player.pauseVideo();
           setIsPlaying(false);
@@ -88,7 +117,8 @@ export const YouTubePlayer = forwardRef<{
     cancel: () => {
       if (player && isReady) {
         try {
-          setSavedTime(0);
+          // Reset saved position for this video
+          updateSavedPosition(videoId, 0);
           player.seekTo(0);
           player.stopVideo();
           setIsPlaying(false);
@@ -116,7 +146,7 @@ export const YouTubePlayer = forwardRef<{
         }
       }
     }
-  }))
+  }), [player, isReady, isPlaying, isMuted, videoId, updateSavedPosition, onPlayStateChange, onMuteStateChange])
 
   const clearTimeUpdateInterval = useCallback(() => {
     if (timeUpdateInterval.current) {
@@ -135,9 +165,9 @@ export const YouTubePlayer = forwardRef<{
             const duration = player.getDuration() || 0
             setCurrentTime(currentTime)
             
-            // Only update savedTime when playing to avoid overriding paused position
+            // Update the saved position for the current video as playback continues
             if (isPlaying) {
-              setSavedTime(currentTime)
+              updateSavedPosition(currentVideoIdRef.current, currentTime);
             }
             
             if (duration > 0) {
@@ -149,7 +179,7 @@ export const YouTubePlayer = forwardRef<{
         }
       }, 100) // Update more frequently for smoother progress
     }
-  }, [player, isReady, isPlaying])
+  }, [player, isReady, isPlaying, updateSavedPosition])
 
   // Load YouTube API
   useEffect(() => {
@@ -167,6 +197,11 @@ export const YouTubePlayer = forwardRef<{
       clearTimeUpdateInterval()
       if (player) {
         try {
+          // Save the final position before unmounting
+          if (isReady && player.getCurrentTime) {
+            const finalPosition = player.getCurrentTime() || 0;
+            updateSavedPosition(currentVideoIdRef.current, finalPosition);
+          }
           player.destroy()
         } catch (error) {
           console.error("Error destroying player:", error)
@@ -179,9 +214,22 @@ export const YouTubePlayer = forwardRef<{
   useEffect(() => {
     if (player && isReady && videoId) {
       try {
-        // When loading a new video, reset the saved time to start from beginning
-        setSavedTime(0);
-        player.loadVideoById(videoId);
+        // Get any previously saved position for this video 
+        let resumePosition = videoPositions.get(videoId) || 0;
+        
+        // If switching between videos or a new video, we don't want to resume from saved position
+        // unless explicitly requested. For now we'll start from beginning for new video loads.
+        if (currentVideoIdRef.current !== videoId) {
+          // It's a different video, start from beginning
+          updateSavedPosition(videoId, 0);
+          resumePosition = 0;
+        }
+        
+        // Load the video
+        player.loadVideoById({
+          videoId: videoId,
+          startSeconds: resumePosition
+        });
         
         // Apply current play/pause state
         if (isPlaying) {
@@ -197,7 +245,7 @@ export const YouTubePlayer = forwardRef<{
           player.unMute()
         }
         
-        setCurrentTime(0);
+        setCurrentTime(resumePosition);
         const newDuration = player.getDuration() || 0
         if (newDuration > 0) {
           setDuration(newDuration)
@@ -206,7 +254,7 @@ export const YouTubePlayer = forwardRef<{
         console.error("Error loading video:", error)
       }
     }
-  }, [videoId, isReady])
+  }, [videoId, isReady, player, isPlaying, isMuted, updateSavedPosition])
 
   // Handle mute state changes
   useEffect(() => {
@@ -244,6 +292,7 @@ export const YouTubePlayer = forwardRef<{
           showinfo: 0,
           origin: window.location.origin,
           playsinline: 1, // Enable inline playback on mobile
+          start: savedTime || 0, // Start from saved position if available
         },
         events: {
           onReady: onPlayerReady,
@@ -271,6 +320,12 @@ export const YouTubePlayer = forwardRef<{
         event.target.mute();
       }
       
+      // If we have a saved position, seek to it
+      const savedPos = videoPositions.get(videoId) || 0;
+      if (savedPos > 0) {
+        event.target.seekTo(savedPos, true);
+      }
+      
       if (autoplay) {
         event.target.playVideo()
       }
@@ -292,14 +347,14 @@ export const YouTubePlayer = forwardRef<{
         // Save current position when paused
         if (player && player.getCurrentTime) {
           const currentPos = player.getCurrentTime() || 0
-          setSavedTime(currentPos)
+          updateSavedPosition(currentVideoIdRef.current, currentPos);
         }
         setIsPlaying(false)
         onPlayStateChange?.(false)
         // Keep updating time even when paused
         startTimeUpdate()
       } else if (event.data === window.YT.PlayerState.ENDED) {
-        setSavedTime(0)
+        updateSavedPosition(currentVideoIdRef.current, 0);
         setIsPlaying(false)
         onPlayStateChange?.(false)
         clearTimeUpdateInterval()
@@ -313,57 +368,18 @@ export const YouTubePlayer = forwardRef<{
     }
   }
 
-  const togglePlay = useCallback(() => {
-    if (player && isReady) {
-      try {
-        if (isPlaying) {
-          // Save the current time before pausing
-          const currentPos = player.getCurrentTime() || 0
-          setSavedTime(currentPos)
-          player.pauseVideo()
-        } else {
-          // Resume from where we left off
-          if (savedTime > 0) {
-            player.seekTo(savedTime, true)
-          }
-          player.playVideo()
-        }
-      } catch (error) {
-        console.error("Error toggling play state:", error)
-      }
-    }
-  }, [player, isPlaying, isReady, savedTime])
-
-  const toggleMute = useCallback(() => {
-    if (player && isReady) {
-      try {
-        if (isMuted) {
-          player.unMute()
-          setIsMuted(false)
-          onMuteStateChange?.(false)
-        } else {
-          player.mute()
-          setIsMuted(true)
-          onMuteStateChange?.(true)
-        }
-      } catch (error) {
-        console.error("Error toggling mute state:", error)
-      }
-    }
-  }, [player, isMuted, isReady, onMuteStateChange])
-
   const handleSeek = useCallback((value: number[]) => {
     const seekTime = value[0]
     if (player && isReady) {
       try {
         player.seekTo(seekTime, true)
         setCurrentTime(seekTime)
-        setSavedTime(seekTime)
+        updateSavedPosition(currentVideoIdRef.current, seekTime);
       } catch (error) {
         console.error("Error seeking:", error)
       }
     }
-  }, [player, isReady])
+  }, [player, isReady, updateSavedPosition])
 
   const formatTime = (seconds: number) => {
     if (!seconds || isNaN(seconds)) return "0:00"
