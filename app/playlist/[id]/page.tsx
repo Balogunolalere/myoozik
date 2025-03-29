@@ -60,9 +60,12 @@ function PlaylistPageContent({ params }: PageProps) {
   const handleStopSong = () => {
     if (playerRef.current) {
       playerRef.current.pause()
-      // Reset the player
-      setCurrentSongIndex(null)
       setIsPlayerPlaying(false)
+      setIsPlayerMuted(false)
+      // Only reset current song index after a short delay to prevent flickering
+      setTimeout(() => {
+        setCurrentSongIndex(null)
+      }, 100)
     }
   }
 

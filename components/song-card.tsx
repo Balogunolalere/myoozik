@@ -54,10 +54,13 @@ export function SongCard({
 
   const handleCancel = (e: React.MouseEvent) => {
     e.stopPropagation()
-    setShowControls(false)
-    setIsCancelled(true)
     if (onStop) {
       onStop()
+    }
+    // Only hide controls and set cancelled state if the song is actually playing
+    if (isPlaying) {
+      setShowControls(false)
+      setIsCancelled(true)
     }
   }
 
