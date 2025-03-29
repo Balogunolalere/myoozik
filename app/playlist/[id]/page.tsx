@@ -52,6 +52,9 @@ function PlaylistPageContent({ params }: PageProps) {
         playerRef.current?.play()
       }
     } else {
+      // If currently playing a different song, reset mute state
+      setIsPlayerMuted(false)
+      // Set new song index, which will trigger autoplay
       setCurrentSongIndex(index)
       setIsPlayerPlaying(true)
     }
