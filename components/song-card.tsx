@@ -44,12 +44,10 @@ export function SongCard({
   }, [isPlaying])
 
   const handleVinylClick = () => {
-    if (!showControls) {
-      setShowControls(true)
-    }
-    if (isCancelled) {
-      setIsCancelled(false)
-    }
+    // Reset both states regardless of their current values
+    setShowControls(true)
+    setIsCancelled(false)
+    // Call onPlay after resetting states
     onPlay()
   }
 
