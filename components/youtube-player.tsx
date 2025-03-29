@@ -54,9 +54,16 @@ export const YouTubePlayer = forwardRef<{
       if (player && isReady) {
         try {
           if (isPlaying) {
-            player.pauseVideo()
+            // Save the current time before pausing
+            const currentPos = player.getCurrentTime() || 0;
+            setSavedTime(currentPos);
+            player.pauseVideo();
           } else {
-            player.playVideo()
+            // Resume from where we left off
+            if (savedTime > 0) {
+              player.seekTo(savedTime, true);
+            }
+            player.playVideo();
           }
         } catch (error) {
           console.error("Error toggling play state:", error)
@@ -66,11 +73,12 @@ export const YouTubePlayer = forwardRef<{
     stop: () => {
       if (player && isReady) {
         try {
-          player.seekTo(0)
-          player.pauseVideo()
-          setIsPlaying(false)
-          onPlayStateChange?.(false)
-          setCurrentTime(0)
+          setSavedTime(0);
+          player.seekTo(0);
+          player.pauseVideo();
+          setIsPlaying(false);
+          onPlayStateChange?.(false);
+          setCurrentTime(0);
         } catch (error) {
           console.error("Error stopping video:", error)
         }
@@ -79,11 +87,12 @@ export const YouTubePlayer = forwardRef<{
     cancel: () => {
       if (player && isReady) {
         try {
-          player.seekTo(0)
-          player.stopVideo()
-          setIsPlaying(false)
-          onPlayStateChange?.(false)
-          setCurrentTime(0)
+          setSavedTime(0);
+          player.seekTo(0);
+          player.stopVideo();
+          setIsPlaying(false);
+          onPlayStateChange?.(false);
+          setCurrentTime(0);
         } catch (error) {
           console.error("Error canceling video:", error)
         }
@@ -107,6 +116,10 @@ export const YouTubePlayer = forwardRef<{
             const currentTime = player.getCurrentTime() || 0
             const duration = player.getDuration() || 0
             setCurrentTime(currentTime)
+            // Update savedTime continuously during playback
+            if (isPlaying) {
+              setSavedTime(currentTime)
+            }
             if (duration > 0) {
               setDuration(duration)
             }
@@ -116,7 +129,7 @@ export const YouTubePlayer = forwardRef<{
         }
       }, 100) // Update more frequently for smoother progress
     }
-  }, [player, isReady])
+  }, [player, isReady, isPlaying])
 
   // Load YouTube API
   useEffect(() => {
@@ -238,11 +251,17 @@ export const YouTubePlayer = forwardRef<{
         onPlayStateChange?.(true)
         startTimeUpdate()
       } else if (event.data === window.YT.PlayerState.PAUSED) {
+        // Save current position when paused
+        if (player && player.getCurrentTime) {
+          const currentPos = player.getCurrentTime() || 0
+          setSavedTime(currentPos)
+        }
         setIsPlaying(false)
         onPlayStateChange?.(false)
         // Keep updating time even when paused
         startTimeUpdate()
       } else if (event.data === window.YT.PlayerState.ENDED) {
+        setSavedTime(0)
         setIsPlaying(false)
         onPlayStateChange?.(false)
         clearTimeUpdateInterval()
@@ -260,15 +279,22 @@ export const YouTubePlayer = forwardRef<{
     if (player && isReady) {
       try {
         if (isPlaying) {
+          // Save the current time before pausing
+          const currentPos = player.getCurrentTime() || 0
+          setSavedTime(currentPos)
           player.pauseVideo()
         } else {
+          // Resume from where we left off
+          if (savedTime > 0) {
+            player.seekTo(savedTime, true)
+          }
           player.playVideo()
         }
       } catch (error) {
         console.error("Error toggling play state:", error)
       }
     }
-  }, [player, isPlaying, isReady])
+  }, [player, isPlaying, isReady, savedTime])
 
   const toggleMute = useCallback(() => {
     if (player && isReady) {
@@ -292,6 +318,7 @@ export const YouTubePlayer = forwardRef<{
       try {
         player.seekTo(seekTime, true)
         setCurrentTime(seekTime)
+        setSavedTime(seekTime)
       } catch (error) {
         console.error("Error seeking:", error)
       }
