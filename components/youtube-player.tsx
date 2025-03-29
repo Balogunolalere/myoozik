@@ -24,9 +24,6 @@ declare global {
   }
 }
 
-// Store the last playing positions of all videos, persisted across component re-renders
-const videoPositions = new Map<string, number>();
-
 export const YouTubePlayer = forwardRef<{ 
   togglePlay: () => void, 
   stop: () => void,
@@ -49,377 +46,271 @@ export const YouTubePlayer = forwardRef<{
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
   const [isReady, setIsReady] = useState(false)
-  const [isBuffering, setIsBuffering] = useState(false)
   
-  // Track if we're attempting to resume playback
-  const resumingRef = useRef(false)
-  
-  // Read the saved position from our cache if available, or start at 0
-  const [savedTime, setSavedTime] = useState(() => videoPositions.get(videoId) || 0)
-  
-  // Keep track of the current videoId for position tracking
-  const currentVideoIdRef = useRef(videoId);
-  
-  // Update the ref when videoId changes
-  useEffect(() => {
-    currentVideoIdRef.current = videoId;
-  }, [videoId]);
+  // Store the video's current position when paused
+  const pausedAtRef = useRef<Record<string, number>>({});
   
   const playerRef = useRef<HTMLDivElement>(null)
   const timeUpdateInterval = useRef<NodeJS.Timeout | null>(null)
   const playerContainerId = useRef(`youtube-player-${Math.random().toString(36).substring(2, 9)}`)
 
-  // Function to safely update the saved position both in state and our cache map
-  const updateSavedPosition = useCallback((videoId: string, position: number) => {
-    // Avoid negative or invalid positions
-    if (position < 0 || isNaN(position)) {
-      position = 0;
-    }
-    
-    // Save to our persistent map
-    videoPositions.set(videoId, position);
-    
-    // Only update state if this is the current video
-    if (videoId === currentVideoIdRef.current) {
-      setSavedTime(position);
-    }
+  // Simple debounce implementation
+  const debounce = useCallback((func: Function, wait: number) => {
+    let timeout: NodeJS.Timeout | null = null;
+    return (...args: any[]) => {
+      if (timeout) clearTimeout(timeout);
+      timeout = setTimeout(() => func(...args), wait);
+    };
   }, []);
 
   // Expose methods through ref
   useImperativeHandle(ref, () => ({
     togglePlay: () => {
-      if (player && isReady) {
-        try {
-          if (isPlaying) {
-            // Save the current time before pausing
-            const currentPos = player.getCurrentTime() || 0;
-            updateSavedPosition(videoId, currentPos);
-            player.pauseVideo();
-          } else {
-            // Mark that we're attempting to resume
-            resumingRef.current = true;
-            
-            // Get the current saved position for this video
-            const resumePosition = videoPositions.get(videoId) || 0;
-            
-            // Resume from where we left off
-            player.seekTo(resumePosition, true);
-            
-            // Small delay before playing to avoid freezing
-            setTimeout(() => {
-              if (player) {
-                player.playVideo();
-              }
-              resumingRef.current = false;
-            }, 50);
-          }
-        } catch (error) {
-          console.error("Error toggling play state:", error);
-          resumingRef.current = false;
+      if (!player || !isReady) return;
+      
+      try {
+        if (isPlaying) {
+          // Save current position when pausing
+          const currentPos = player.getCurrentTime() || 0;
+          pausedAtRef.current[videoId] = currentPos;
+          player.pauseVideo();
+        } else {
+          // When resuming, first seek to the stored position
+          const resumePos = pausedAtRef.current[videoId] || 0;
+          
+          // Directly seek to the position and play
+          player.seekTo(resumePos, true);
+          
+          // Use a very short delay to ensure seeking completes
+          setTimeout(() => {
+            if (player) player.playVideo();
+          }, 10);
         }
+      } catch (error) {
+        console.error("Error toggling play:", error);
       }
     },
     stop: () => {
-      if (player && isReady) {
-        try {
-          // Reset saved position for this video
-          updateSavedPosition(videoId, 0);
-          player.seekTo(0);
-          player.pauseVideo();
-          setIsPlaying(false);
-          onPlayStateChange?.(false);
-          setCurrentTime(0);
-        } catch (error) {
-          console.error("Error stopping video:", error)
-        }
+      if (!player || !isReady) return;
+      
+      try {
+        // Reset position and pause
+        pausedAtRef.current[videoId] = 0;
+        player.seekTo(0);
+        player.pauseVideo();
+        setIsPlaying(false);
+        onPlayStateChange?.(false);
+        setCurrentTime(0);
+      } catch (error) {
+        console.error("Error stopping video:", error);
       }
     },
     cancel: () => {
-      if (player && isReady) {
-        try {
-          // Reset saved position for this video
-          updateSavedPosition(videoId, 0);
-          player.seekTo(0);
-          player.stopVideo();
-          setIsPlaying(false);
-          onPlayStateChange?.(false);
-          setCurrentTime(0);
-        } catch (error) {
-          console.error("Error canceling video:", error)
-        }
+      if (!player || !isReady) return;
+      
+      try {
+        // Reset position and fully stop
+        pausedAtRef.current[videoId] = 0;
+        player.seekTo(0);
+        player.stopVideo();
+        setIsPlaying(false);
+        onPlayStateChange?.(false);
+        setCurrentTime(0);
+      } catch (error) {
+        console.error("Error canceling video:", error);
       }
     },
     toggleMute: () => {
-      if (player && isReady) {
-        try {
-          if (isMuted) {
-            player.unMute();
-            setIsMuted(false);
-            onMuteStateChange?.(false);
-          } else {
-            player.mute();
-            setIsMuted(true);
-            onMuteStateChange?.(true);
-          }
-        } catch (error) {
-          console.error("Error toggling mute state:", error)
+      if (!player || !isReady) return;
+      
+      try {
+        if (isMuted) {
+          player.unMute();
+          setIsMuted(false);
+          onMuteStateChange?.(false);
+        } else {
+          player.mute();
+          setIsMuted(true);
+          onMuteStateChange?.(true);
         }
+      } catch (error) {
+        console.error("Error toggling mute:", error);
       }
     }
-  }), [player, isReady, isPlaying, isMuted, videoId, updateSavedPosition, onPlayStateChange, onMuteStateChange])
+  }), [player, isReady, isPlaying, isMuted, videoId, onPlayStateChange, onMuteStateChange]);
 
   const clearTimeUpdateInterval = useCallback(() => {
     if (timeUpdateInterval.current) {
-      clearInterval(timeUpdateInterval.current)
-      timeUpdateInterval.current = null
+      clearInterval(timeUpdateInterval.current);
+      timeUpdateInterval.current = null;
     }
-  }, [])
+  }, []);
 
   const startTimeUpdate = useCallback(() => {
-    clearTimeUpdateInterval()
+    clearTimeUpdateInterval();
+    
     if (player && isReady) {
+      // Update less frequently to reduce issues
       timeUpdateInterval.current = setInterval(() => {
         try {
-          // Don't update during certain operations
-          if (resumingRef.current) return;
-          
           if (player.getCurrentTime && player.getDuration) {
-            const currentTime = player.getCurrentTime() || 0;
-            const duration = player.getDuration() || 0;
+            const time = player.getCurrentTime() || 0;
+            const dur = player.getDuration() || 0;
             
-            // Avoid updating if the values haven't changed
-            if (Math.abs(currentTime - savedTime) > 0.5) {
-              setCurrentTime(currentTime);
-              
-              // Only update saved position when playing normally
-              if (isPlaying && !isBuffering) {
-                updateSavedPosition(currentVideoIdRef.current, currentTime);
-              }
-            }
+            setCurrentTime(time);
             
-            if (duration > 0 && duration !== Infinity) {
-              setDuration(duration);
+            if (dur > 0 && dur !== Infinity) {
+              setDuration(dur);
             }
           }
         } catch (error) {
-          console.error("Error updating time:", error)
+          console.error("Error updating time:", error);
         }
-      }, 250); // Reduced frequency to avoid potential race conditions
+      }, 500);
     }
-  }, [player, isReady, isPlaying, isBuffering, savedTime, updateSavedPosition, clearTimeUpdateInterval])
+  }, [player, isReady, clearTimeUpdateInterval]);
 
-  // Load YouTube API
+  // Initialize YouTube player
   useEffect(() => {
+    let isMounted = true;
+    
+    const initPlayer = () => {
+      if (!playerRef.current || !isMounted) return;
+      
+      try {
+        const newPlayer = new window.YT.Player(playerContainerId.current, {
+          height: "0",
+          width: "0",
+          videoId: videoId,
+          playerVars: {
+            autoplay: autoplay ? 1 : 0,
+            controls: 0,
+            disablekb: 1,
+            enablejsapi: 1,
+            iv_load_policy: 3,
+            modestbranding: 1,
+            rel: 0,
+            showinfo: 0,
+            origin: window.location.origin,
+            playsinline: 1,
+          },
+          events: {
+            onReady: (event) => {
+              if (!isMounted) return;
+              setIsReady(true);
+              
+              const dur = event.target.getDuration() || 0;
+              setDuration(dur);
+              
+              if (isMuted) {
+                event.target.mute();
+              }
+              
+              if (autoplay) {
+                event.target.playVideo();
+              }
+              
+              startTimeUpdate();
+            },
+            onStateChange: (event) => {
+              if (!isMounted) return;
+              
+              if (event.data === window.YT.PlayerState.PLAYING) {
+                setIsPlaying(true);
+                onPlayStateChange?.(true);
+                startTimeUpdate();
+              } 
+              else if (event.data === window.YT.PlayerState.PAUSED) {
+                // When paused naturally, save position
+                if (player && player.getCurrentTime) {
+                  pausedAtRef.current[videoId] = player.getCurrentTime() || 0;
+                }
+                
+                setIsPlaying(false);
+                onPlayStateChange?.(false);
+                startTimeUpdate();
+              } 
+              else if (event.data === window.YT.PlayerState.ENDED) {
+                pausedAtRef.current[videoId] = 0;
+                setIsPlaying(false);
+                onPlayStateChange?.(false);
+                clearTimeUpdateInterval();
+                
+                if (onEnded) onEnded();
+              }
+            },
+            onError: (event) => {
+              console.error("YouTube player error:", event.data);
+            },
+          },
+        });
+        
+        if (isMounted) {
+          setPlayer(newPlayer);
+        }
+      } catch (error) {
+        console.error("Error initializing player:", error);
+      }
+    };
+    
     if (!window.YT) {
-      const tag = document.createElement("script")
-      tag.src = "https://www.youtube.com/iframe_api"
-      const firstScriptTag = document.getElementsByTagName("script")[0]
-      firstScriptTag.parentNode?.insertBefore(tag, firstScriptTag)
-      window.onYouTubeIframeAPIReady = initializePlayer
+      const tag = document.createElement("script");
+      tag.src = "https://www.youtube.com/iframe_api";
+      const firstScriptTag = document.getElementsByTagName("script")[0];
+      firstScriptTag.parentNode?.insertBefore(tag, firstScriptTag);
+      window.onYouTubeIframeAPIReady = initPlayer;
     } else {
-      initializePlayer()
+      initPlayer();
     }
-
+    
     return () => {
-      clearTimeUpdateInterval()
+      isMounted = false;
+      clearTimeUpdateInterval();
+      
       if (player) {
         try {
-          // Save the final position before unmounting
-          if (isReady && player.getCurrentTime) {
-            const finalPosition = player.getCurrentTime() || 0;
-            updateSavedPosition(currentVideoIdRef.current, finalPosition);
-          }
-          player.destroy()
+          player.destroy();
         } catch (error) {
-          console.error("Error destroying player:", error)
+          console.error("Error destroying player:", error);
         }
       }
-    }
-  }, [])
+    };
+  }, []);
 
   // Handle video ID changes
   useEffect(() => {
-    if (player && isReady && videoId) {
-      try {
-        // Get any previously saved position for this video 
-        let resumePosition = videoPositions.get(videoId) || 0;
-        
-        // If switching between videos or a new video, we don't want to resume from saved position
-        // unless explicitly requested. For now we'll start from beginning for new video loads.
-        if (currentVideoIdRef.current !== videoId) {
-          // It's a different video, start from beginning
-          updateSavedPosition(videoId, 0);
-          resumePosition = 0;
-        }
-        
-        // Load the video with the proper position
-        player.cueVideoById({
-          videoId: videoId,
-          startSeconds: resumePosition
-        });
-        
-        // Apply play state with slight delay to avoid race conditions
-        setTimeout(() => {
-          if (!player) return;
-          
-          // Apply current play/pause state
-          if (isPlaying) {
-            player.playVideo()
-          } else {
-            player.pauseVideo()
-          }
-          
-          // Apply current mute state
-          if (isMuted) {
-            player.mute()
-          } else {
-            player.unMute()
-          }
-        }, 50);
-        
-        setCurrentTime(resumePosition);
-      } catch (error) {
-        console.error("Error loading video:", error)
-      }
-    }
-  }, [videoId, isReady, player, isPlaying, isMuted, updateSavedPosition])
-
-  // Handle mute state changes
-  useEffect(() => {
-    if (player && isReady) {
-      try {
-        if (isMuted) {
-          player.mute()
-        } else {
-          player.unMute()
-        }
-        // Notify parent of mute state change
-        onMuteStateChange?.(isMuted);
-      } catch (error) {
-        console.error("Error updating mute state:", error)
-      }
-    }
-  }, [isMuted, player, isReady, onMuteStateChange])
-
-  const initializePlayer = () => {
-    if (!playerRef.current) return
-
+    if (!player || !isReady || !videoId) return;
+    
     try {
-      const newPlayer = new window.YT.Player(playerContainerId.current, {
-        height: "0",
-        width: "0",
+      // Preserve current play state
+      const wasPlaying = isPlaying;
+      
+      // Get any saved position for this video
+      const resumePos = pausedAtRef.current[videoId] || 0;
+      
+      // Load new video
+      player.loadVideoById({
         videoId: videoId,
-        playerVars: {
-          autoplay: autoplay ? 1 : 0,
-          controls: 0,
-          disablekb: 1,
-          enablejsapi: 1,
-          iv_load_policy: 3,
-          modestbranding: 1,
-          rel: 0,
-          showinfo: 0,
-          origin: window.location.origin,
-          playsinline: 1, // Enable inline playback on mobile
-          start: savedTime || 0, // Start from saved position if available
-        },
-        events: {
-          onReady: onPlayerReady,
-          onStateChange: onPlayerStateChange,
-          onError: (event: any) => {
-            console.error("YouTube player error:", event.data)
-          },
-        },
-      })
-
-      setPlayer(newPlayer)
-    } catch (error) {
-      console.error("Error initializing player:", error)
-    }
-  }
-
-  const onPlayerReady = (event: any) => {
-    try {
-      setIsReady(true)
-      const duration = event.target.getDuration() || 0
-      setDuration(duration)
+        startSeconds: resumePos
+      });
       
-      // Check if player should be muted initially
-      if (isMuted) {
-        event.target.mute();
-      }
-      
-      // If we have a saved position, seek to it
-      const savedPos = videoPositions.get(videoId) || 0;
-      if (savedPos > 0) {
-        event.target.seekTo(savedPos, true);
-      }
-      
-      if (autoplay) {
-        // Small delay before playing to ensure the player is fully ready
+      // If we weren't playing, pause immediately after loading
+      if (!wasPlaying) {
         setTimeout(() => {
-          event.target.playVideo();
-        }, 100);
+          if (player) player.pauseVideo();
+        }, 10);
       }
       
-      // Start time updates immediately
-      startTimeUpdate()
-    } catch (error) {
-      console.error("Error in onPlayerReady:", error)
-    }
-  }
-
-  const onPlayerStateChange = (event: any) => {
-    try {
-      if (event.data === window.YT.PlayerState.PLAYING) {
-        setIsBuffering(false);
-        setIsPlaying(true);
-        onPlayStateChange?.(true);
-        startTimeUpdate();
-      } else if (event.data === window.YT.PlayerState.PAUSED) {
-        // Don't update position if we're in the process of resuming
-        if (!resumingRef.current && player && player.getCurrentTime) {
-          const currentPos = player.getCurrentTime() || 0;
-          updateSavedPosition(currentVideoIdRef.current, currentPos);
-        }
-        
-        setIsPlaying(false);
-        onPlayStateChange?.(false);
-        startTimeUpdate();
-      } else if (event.data === window.YT.PlayerState.ENDED) {
-        updateSavedPosition(currentVideoIdRef.current, 0);
-        setIsPlaying(false);
-        onPlayStateChange?.(false);
-        clearTimeUpdateInterval();
-        if (onEnded) onEnded();
-      } else if (event.data === window.YT.PlayerState.BUFFERING) {
-        setIsBuffering(true);
-        // Keep updating time during buffering
-        startTimeUpdate();
+      // Apply current mute state
+      if (isMuted) {
+        player.mute();
+      } else {
+        player.unMute();
       }
     } catch (error) {
-      console.error("Error in onPlayerStateChange:", error)
+      console.error("Error loading video:", error);
     }
-  }
-
-  const handleSeek = useCallback((value: number[]) => {
-    const seekTime = value[0]
-    if (player && isReady) {
-      try {
-        player.seekTo(seekTime, true)
-        setCurrentTime(seekTime)
-        updateSavedPosition(currentVideoIdRef.current, seekTime);
-      } catch (error) {
-        console.error("Error seeking:", error)
-      }
-    }
-  }, [player, isReady, updateSavedPosition])
-
-  const formatTime = (seconds: number) => {
-    if (!seconds || isNaN(seconds)) return "0:00"
-    const mins = Math.floor(seconds / 60)
-    const secs = Math.floor(seconds % 60)
-    return `${mins}:${secs.toString().padStart(2, "0")}`
-  }
+  }, [videoId, isReady, player]);
 
   return (
     <div style={{ display: 'none' }} className="plyr-youtube">
@@ -427,6 +318,6 @@ export const YouTubePlayer = forwardRef<{
         <div id={playerContainerId.current}></div>
       </div>
     </div>
-  )
-})
+  );
+});
 
