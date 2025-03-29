@@ -32,10 +32,21 @@ export function SongCard({
 }: SongCardProps) {
   const [isHovering, setIsHovering] = useState(false)
   const [showControls, setShowControls] = useState(true)
+  const [isCancelled, setIsCancelled] = useState(false)
+
+  // Reset cancelled state when song starts playing
+  useEffect(() => {
+    if (isPlaying) {
+      setIsCancelled(false)
+    }
+  }, [isPlaying])
 
   const handleVinylClick = () => {
     if (!showControls) {
       setShowControls(true)
+    }
+    if (isCancelled) {
+      setIsCancelled(false)
     }
     onPlay()
   }
@@ -141,13 +152,13 @@ export function SongCard({
               height: '100%',
             }}
             animate={{ 
-              rotate: isPlaying ? 360 : 0,
-              scale: isPlaying ? 1 : 0.95,
+              rotate: isPlaying && !isCancelled ? 360 : 0,
+              scale: (isPlaying && !isCancelled) ? 1 : 0.95,
             }}
             transition={{ 
               rotate: {
                 duration: 2,
-                repeat: Infinity,
+                repeat: (isPlaying && !isCancelled) ? Infinity : 0,
                 ease: "linear"
               },
               scale: { duration: 0.3 }
@@ -191,9 +202,9 @@ export function SongCard({
           </motion.div>
 
           {/* Play button on hover when controls are hidden */}
-          {!showControls && isHovering && (
+          {!showControls && isHovering && !isCancelled && (
             <motion.div
-              className="absolute inset-0 z-20 flex items-center justify-center bg-black/30 rounded-full"
+              className="absolute inset-0 z-20 flex items-center justify-center bg-black/30 rounded-full sm:hidden"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.2 }}
@@ -214,7 +225,7 @@ export function SongCard({
           )}
 
           {/* Full controls overlay */}
-          {showControls && (
+          {showControls && !isCancelled && (
             <motion.div
               className="absolute inset-0 z-20 flex items-center justify-center bg-black/30 rounded-full" 
               initial={{ opacity: 0 }}
@@ -260,6 +271,7 @@ export function SongCard({
                   onClick={(e) => {
                     e.stopPropagation()
                     setShowControls(false)
+                    setIsCancelled(true)
                   }}
                   className="neobrutalist-button !p-[3px] sm:!p-1.5 bg-white/90 hover:bg-red-500 hover:text-white z-10"
                   whileHover={{ scale: 1.1 }}
