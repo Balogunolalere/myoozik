@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Image from "next/image"
-import { Play, Pause, Music, Volume2, VolumeX } from "lucide-react"
+import { Play, Pause, Music, Volume2, VolumeX, X } from "lucide-react"
 import { motion } from "framer-motion"
 
 interface SongCardProps {
@@ -31,6 +31,14 @@ export function SongCard({
   isMuted = false,
 }: SongCardProps) {
   const [isHovering, setIsHovering] = useState(false)
+  const [showControls, setShowControls] = useState(true)
+
+  const handleVinylClick = () => {
+    if (!showControls) {
+      setShowControls(true)
+    }
+    onPlay()
+  }
 
   return (
     <motion.div
@@ -63,44 +71,6 @@ export function SongCard({
                 {duration}
               </div>
             )}
-
-            {/* Control overlay */}
-            <motion.div
-              className="absolute inset-0 flex items-center justify-center bg-black/30" 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: isHovering || isPlaying ? 1 : 0 }}
-              transition={{ duration: 0.2 }}
-            >
-              <div className="flex items-center gap-1">
-                <motion.button
-                  onClick={onPlay}
-                  className="neobrutalist-button !p-[3px] sm:!p-1.5 bg-white/90 hover:bg-[#FD6C6C] z-10"
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                  aria-label={isPlaying ? "Pause song" : "Play song"}
-                >
-                  {isPlaying ? 
-                    <Pause className="h-2.5 w-2.5 sm:h-4 sm:w-4" /> : 
-                    <Play className="h-2.5 w-2.5 sm:h-4 sm:w-4" />
-                  }
-                </motion.button>
-
-                {onMute && (
-                  <motion.button
-                    onClick={onMute}
-                    className="neobrutalist-button !p-[3px] sm:!p-1.5 bg-white/90 hover:bg-[#FD6C6C] z-10"
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                    aria-label={isMuted ? "Unmute" : "Mute"}
-                  >
-                    {isMuted ? 
-                      <VolumeX className="h-2.5 w-2.5 sm:h-4 sm:w-4" /> : 
-                      <Volume2 className="h-2.5 w-2.5 sm:h-4 sm:w-4" />
-                    }
-                  </motion.button>
-                )}
-              </div>
-            </motion.div>
           </div>
 
           <div className="flex flex-col min-w-0 flex-1">
@@ -156,18 +126,23 @@ export function SongCard({
         </div>
 
         {/* Vinyl Record - Right Side */}
-        <div className="relative flex-shrink-0 w-[60px] h-[60px] sm:w-[100px] sm:h-[100px]">
+        <div 
+          className="relative flex-shrink-0 w-[60px] h-[60px] sm:w-[100px] sm:h-[100px] cursor-pointer" 
+          onClick={handleVinylClick}
+        >
+          {/* Base vinyl disc - Always visible */}
           <motion.div 
-            className="absolute inset-0"
+            className="absolute inset-0 z-10"
             style={{
-              backgroundImage: `radial-gradient(circle at center, #333 0%, #000 70%)`,
+              backgroundColor: '#000',
               borderRadius: '50%',
               border: '4px solid #222',
+              width: '100%',
+              height: '100%',
             }}
             animate={{ 
               rotate: isPlaying ? 360 : 0,
-              scale: isPlaying ? 1 : 0.8,
-              opacity: isPlaying ? 1 : 0 
+              scale: isPlaying ? 1 : 0.95,
             }}
             transition={{ 
               rotate: {
@@ -175,27 +150,127 @@ export function SongCard({
                 repeat: Infinity,
                 ease: "linear"
               },
-              scale: { duration: 0.3 },
-              opacity: { duration: 0.3 }
+              scale: { duration: 0.3 }
             }}
           >
             {/* Vinyl grooves */}
-            {Array.from({ length: 5 }).map((_, i) => (
+            {Array.from({ length: 12 }).map((_, i) => (
               <motion.div
                 key={i}
-                className="absolute inset-0 rounded-full"
+                className="absolute inset-0 border border-gray-600/30 rounded-full"
                 style={{
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  margin: `${(i + 1) * 4}px`,
+                  margin: `${(i + 1) * 3}px`,
                 }}
               />
             ))}
             
             {/* Center label */}
-            <div className="absolute inset-[30%] rounded-full bg-[#FD6C6C] border-2 border-[#333] flex items-center justify-center">
-              <div className="w-1 h-1 bg-black rounded-full" />
-            </div>
+            <motion.div 
+              className="absolute bg-[#FD6C6C] flex items-center justify-center"
+              style={{
+                width: '40%',
+                height: '40%',
+                borderRadius: '50%',
+                border: '2px solid #333',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+              }}
+            >
+              <div className="w-[20%] h-[20%] bg-black rounded-full" />
+            </motion.div>
+
+            {/* Reflection effect */}
+            <div 
+              className="absolute inset-0 rounded-full" 
+              style={{
+                background: 'linear-gradient(45deg, transparent 45%, rgba(255,255,255,0.1) 48%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.1) 52%, transparent 55%)',
+                pointerEvents: 'none'
+              }}
+            />
           </motion.div>
+
+          {/* Play button on hover when controls are hidden */}
+          {!showControls && isHovering && (
+            <motion.div
+              className="absolute inset-0 z-20 flex items-center justify-center bg-black/30 rounded-full"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.2 }}
+            >
+              <motion.button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setShowControls(true)
+                  onPlay()
+                }}
+                className="neobrutalist-button !p-[3px] sm:!p-1.5 bg-white/90 hover:bg-[#FD6C6C] z-10"
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+              >
+                <Play className="h-2.5 w-2.5 sm:h-4 sm:w-4" />
+              </motion.button>
+            </motion.div>
+          )}
+
+          {/* Full controls overlay */}
+          {showControls && (
+            <motion.div
+              className="absolute inset-0 z-20 flex items-center justify-center bg-black/30 rounded-full" 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: isHovering || isPlaying ? 1 : 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              <div className="flex items-center gap-1">
+                <motion.button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onPlay()
+                  }}
+                  className="neobrutalist-button !p-[3px] sm:!p-1.5 bg-white/90 hover:bg-[#FD6C6C] z-10"
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  aria-label={isPlaying ? "Pause song" : "Play song"}
+                >
+                  {isPlaying ? 
+                    <Pause className="h-2.5 w-2.5 sm:h-4 sm:w-4" /> : 
+                    <Play className="h-2.5 w-2.5 sm:h-4 sm:w-4" />
+                  }
+                </motion.button>
+
+                {onMute && (
+                  <motion.button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onMute()
+                    }}
+                    className="neobrutalist-button !p-[3px] sm:!p-1.5 bg-white/90 hover:bg-[#FD6C6C] z-10"
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    aria-label={isMuted ? "Unmute" : "Mute"}
+                  >
+                    {isMuted ? 
+                      <VolumeX className="h-2.5 w-2.5 sm:h-4 sm:w-4" /> : 
+                      <Volume2 className="h-2.5 w-2.5 sm:h-4 sm:w-4" />
+                    }
+                  </motion.button>
+                )}
+
+                <motion.button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setShowControls(false)
+                  }}
+                  className="neobrutalist-button !p-[3px] sm:!p-1.5 bg-white/90 hover:bg-red-500 hover:text-white z-10"
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  aria-label="Hide controls"
+                >
+                  <X className="h-2.5 w-2.5 sm:h-4 sm:w-4" />
+                </motion.button>
+              </div>
+            </motion.div>
+          )}
         </div>
       </div>
     </motion.div>
