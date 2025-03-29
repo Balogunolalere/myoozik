@@ -1,8 +1,5 @@
 "use client"
 import { forwardRef, useEffect, useRef, useCallback, useImperativeHandle, useState } from "react"
-import { Play, Pause, SkipForward, SkipBack, Volume2, VolumeX } from "lucide-react"
-import { motion } from "framer-motion"
-import { Slider } from "./ui/slider"
 
 interface YouTubePlayerProps {
   videoId: string
@@ -23,16 +20,40 @@ declare global {
   }
 }
 
-// Define YouTube API event types to address TypeScript errors
 interface YouTubeEvent {
-  target: any;
-  data?: number;
+  target: any
+  data?: number
 }
 
-export const YouTubePlayer = forwardRef<{ 
-  togglePlay: () => void, 
-  stop: () => void,
-  cancel: () => void,
+let ytApiPromise: Promise<void> | null = null
+
+function loadYouTubeApi(): Promise<void> {
+  if (ytApiPromise) return ytApiPromise
+  
+  ytApiPromise = new Promise((resolve) => {
+    if (window.YT) {
+      resolve()
+      return
+    }
+
+    const tag = document.createElement('script')
+    tag.src = 'https://www.youtube.com/iframe_api'
+
+    window.onYouTubeIframeAPIReady = () => {
+      resolve()
+    }
+
+    const firstScriptTag = document.getElementsByTagName('script')[0]
+    firstScriptTag.parentNode?.insertBefore(tag, firstScriptTag)
+  })
+
+  return ytApiPromise
+}
+
+export const YouTubePlayer = forwardRef<{
+  togglePlay: () => void
+  stop: () => void
+  cancel: () => void
   toggleMute: () => void
 }, YouTubePlayerProps>(({
   videoId,
@@ -48,147 +69,83 @@ export const YouTubePlayer = forwardRef<{
   const [player, setPlayer] = useState<any>(null)
   const [isPlaying, setIsPlaying] = useState(autoplay)
   const [isMuted, setIsMuted] = useState(false)
-  const [currentTime, setCurrentTime] = useState(0)
-  const [duration, setDuration] = useState(0)
   const [isReady, setIsReady] = useState(false)
+  const [hasError, setHasError] = useState(false)
   
-  // Store the video's current position when paused
-  const pausedAtRef = useRef<Record<string, number>>({});
-  const currentVideoIdRef = useRef<string>(videoId);
-  
-  const playerRef = useRef<HTMLDivElement>(null)
-  const timeUpdateInterval = useRef<NodeJS.Timeout | null>(null)
   const playerContainerId = useRef(`youtube-player-${Math.random().toString(36).substring(2, 9)}`)
-
-  // Simple debounce implementation
-  const debounce = useCallback((func: Function, wait: number) => {
-    let timeout: NodeJS.Timeout | null = null;
-    return (...args: any[]) => {
-      if (timeout) clearTimeout(timeout);
-      timeout = setTimeout(() => func(...args), wait);
-    };
-  }, []);
-
-  // Update current video ID ref when prop changes
+  const playerRef = useRef<HTMLDivElement>(null)
+  const currentVideoIdRef = useRef<string>(videoId)
+  
   useEffect(() => {
-    currentVideoIdRef.current = videoId;
-  }, [videoId]);
+    currentVideoIdRef.current = videoId
+  }, [videoId])
 
   // Expose methods through ref
   useImperativeHandle(ref, () => ({
     togglePlay: () => {
-      if (!player || !isReady) return;
+      if (!player || !isReady || hasError) return
       
       try {
         if (isPlaying) {
-          // Save current position when pausing
-          const currentPos = player.getCurrentTime() || 0;
-          pausedAtRef.current[videoId] = currentPos;
-          player.pauseVideo();
+          player.pauseVideo()
         } else {
-          // When resuming, first seek to the stored position
-          const resumePos = pausedAtRef.current[videoId] || 0;
-          
-          // Directly seek to the position and play
-          player.seekTo(resumePos, true);
-          
-          // Use a very short delay to ensure seeking completes
-          setTimeout(() => {
-            if (player) player.playVideo();
-          }, 10);
+          player.playVideo()
         }
       } catch (error) {
-        console.error("Error toggling play:", error);
+        console.error("Error toggling play:", error)
       }
     },
     stop: () => {
-      if (!player || !isReady) return;
+      if (!player || !isReady || hasError) return
       
       try {
-        // Reset position and pause
-        pausedAtRef.current[videoId] = 0;
-        player.seekTo(0);
-        player.pauseVideo();
-        setIsPlaying(false);
-        onPlayStateChange?.(false);
-        setCurrentTime(0);
+        player.seekTo(0)
+        player.pauseVideo()
       } catch (error) {
-        console.error("Error stopping video:", error);
+        console.error("Error stopping video:", error)
       }
     },
     cancel: () => {
-      if (!player || !isReady) return;
+      if (!player || !isReady || hasError) return
       
       try {
-        // Reset position and fully stop
-        pausedAtRef.current[videoId] = 0;
-        player.seekTo(0);
-        player.stopVideo();
-        setIsPlaying(false);
-        onPlayStateChange?.(false);
-        setCurrentTime(0);
+        player.seekTo(0)
+        player.stopVideo()
       } catch (error) {
-        console.error("Error canceling video:", error);
+        console.error("Error canceling video:", error)
       }
     },
     toggleMute: () => {
-      if (!player || !isReady) return;
+      if (!player || !isReady || hasError) return
       
       try {
         if (isMuted) {
-          player.unMute();
-          setIsMuted(false);
-          onMuteStateChange?.(false);
+          player.unMute()
+          setIsMuted(false)
+          onMuteStateChange?.(false)
         } else {
-          player.mute();
-          setIsMuted(true);
-          onMuteStateChange?.(true);
+          player.mute()
+          setIsMuted(true)
+          onMuteStateChange?.(true)
         }
       } catch (error) {
-        console.error("Error toggling mute:", error);
+        console.error("Error toggling mute:", error)
       }
     }
-  }), [player, isReady, isPlaying, isMuted, videoId, onPlayStateChange, onMuteStateChange]);
-
-  const clearTimeUpdateInterval = useCallback(() => {
-    if (timeUpdateInterval.current) {
-      clearInterval(timeUpdateInterval.current);
-      timeUpdateInterval.current = null;
-    }
-  }, []);
-
-  const startTimeUpdate = useCallback(() => {
-    clearTimeUpdateInterval();
-    
-    if (player && isReady) {
-      // Update less frequently to reduce issues
-      timeUpdateInterval.current = setInterval(() => {
-        try {
-          if (player.getCurrentTime && player.getDuration) {
-            const time = player.getCurrentTime() || 0;
-            const dur = player.getDuration() || 0;
-            
-            setCurrentTime(time);
-            
-            if (dur > 0 && dur !== Infinity) {
-              setDuration(dur);
-            }
-          }
-        } catch (error) {
-          console.error("Error updating time:", error);
-        }
-      }, 500);
-    }
-  }, [player, isReady, clearTimeUpdateInterval]);
+  }), [player, isReady, isPlaying, isMuted, hasError, onMuteStateChange])
 
   // Initialize YouTube player
   useEffect(() => {
-    let isMounted = true;
+    let isMounted = true
     
-    const initPlayer = () => {
-      if (!playerRef.current || !isMounted) return;
+    async function initPlayer() {
+      if (!playerRef.current || !isMounted) return
       
       try {
+        await loadYouTubeApi()
+        
+        if (!isMounted) return
+
         const newPlayer = new window.YT.Player(playerContainerId.current, {
           height: "0",
           width: "0",
@@ -207,127 +164,101 @@ export const YouTubePlayer = forwardRef<{
           },
           events: {
             onReady: (event: YouTubeEvent) => {
-              if (!isMounted) return;
-              setIsReady(true);
+              if (!isMounted) return
               
-              const dur = event.target.getDuration() || 0;
-              setDuration(dur);
+              setPlayer(event.target)
+              setIsReady(true)
+              setHasError(false)
               
               if (isMuted) {
-                event.target.mute();
+                event.target.mute()
               }
               
               if (autoplay) {
-                event.target.playVideo();
+                event.target.playVideo()
               }
-              
-              startTimeUpdate();
             },
             onStateChange: (event: YouTubeEvent) => {
-              if (!isMounted) return;
+              if (!isMounted) return
               
-              if (event.data === window.YT.PlayerState.PLAYING) {
-                setIsPlaying(true);
-                onPlayStateChange?.(true);
-                startTimeUpdate();
-              } 
-              else if (event.data === window.YT.PlayerState.PAUSED) {
-                // When paused naturally, save position
-                if (player && player.getCurrentTime) {
-                  const currentVideoId = currentVideoIdRef.current;
-                  pausedAtRef.current[currentVideoId] = player.getCurrentTime() || 0;
-                }
-                
-                setIsPlaying(false);
-                onPlayStateChange?.(false);
-                startTimeUpdate();
-              } 
-              else if (event.data === window.YT.PlayerState.ENDED) {
-                // Reset position for this video
-                pausedAtRef.current[currentVideoIdRef.current] = 0;
-                setIsPlaying(false);
-                onPlayStateChange?.(false);
-                clearTimeUpdateInterval();
-                
-                // Call onEnded to trigger next song playback
-                if (onEnded) {
-                  // Small delay to allow state updates to complete
-                  setTimeout(() => onEnded(), 100);
-                }
+              switch (event.data) {
+                case window.YT.PlayerState.PLAYING:
+                  setIsPlaying(true)
+                  onPlayStateChange?.(true)
+                  break
+                case window.YT.PlayerState.PAUSED:
+                  setIsPlaying(false)
+                  onPlayStateChange?.(false)
+                  break
+                case window.YT.PlayerState.ENDED:
+                  setIsPlaying(false)
+                  onPlayStateChange?.(false)
+                  onEnded?.()
+                  break
               }
             },
             onError: (event: YouTubeEvent) => {
-              console.error("YouTube player error:", event.data);
+              console.error("YouTube player error:", event.data)
+              setHasError(true)
+              setIsPlaying(false)
+              onPlayStateChange?.(false)
             },
           },
-        });
-        
-        if (isMounted) {
-          setPlayer(newPlayer);
-        }
+        })
       } catch (error) {
-        console.error("Error initializing player:", error);
+        console.error("Error initializing player:", error)
+        setHasError(true)
       }
-    };
-    
-    if (!window.YT) {
-      const tag = document.createElement("script");
-      tag.src = "https://www.youtube.com/iframe_api";
-      const firstScriptTag = document.getElementsByTagName("script")[0];
-      firstScriptTag.parentNode?.insertBefore(tag, firstScriptTag);
-      window.onYouTubeIframeAPIReady = initPlayer;
-    } else {
-      initPlayer();
     }
+
+    initPlayer()
     
     return () => {
-      isMounted = false;
-      clearTimeUpdateInterval();
-      
-      if (player) {
+      isMounted = false
+      if (player?.destroy) {
         try {
-          player.destroy();
+          player.destroy()
         } catch (error) {
-          console.error("Error destroying player:", error);
+          console.error("Error destroying player:", error)
         }
       }
-    };
-  }, []);
+    }
+  }, [])
 
   // Handle video ID changes
   useEffect(() => {
-    if (!player || !isReady || !videoId) return;
+    if (!player || !isReady || !videoId || hasError) return
     
     try {
-      // Preserve current play state
-      const wasPlaying = isPlaying;
-      
-      // Get any saved position for this video
-      const resumePos = pausedAtRef.current[videoId] || 0;
+      const wasPlaying = isPlaying
       
       // Load new video
       player.loadVideoById({
         videoId: videoId,
-        startSeconds: resumePos
-      });
+        startSeconds: 0
+      })
       
       // If we weren't playing, pause immediately after loading
       if (!wasPlaying) {
+        // Small delay to ensure video loads before pausing
         setTimeout(() => {
-          if (player) player.pauseVideo();
-        }, 10);
+          if (player?.pauseVideo) {
+            player.pauseVideo()
+          }
+        }, 100)
       }
       
-      // Apply current mute state
+      // Apply mute state
       if (isMuted) {
-        player.mute();
+        player.mute()
       } else {
-        player.unMute();
+        player.unMute()
       }
     } catch (error) {
-      console.error("Error loading video:", error);
+      console.error("Error loading video:", error)
+      setHasError(true)
     }
-  }, [videoId, isReady, player, isPlaying]);
+  }, [videoId, isReady, player, isPlaying, isMuted, hasError])
 
   return (
     <div style={{ display: 'none' }} className="plyr-youtube">
@@ -335,8 +266,8 @@ export const YouTubePlayer = forwardRef<{
         <div id={playerContainerId.current}></div>
       </div>
     </div>
-  );
-});
+  )
+})
 
-YouTubePlayer.displayName = "YouTubePlayer";
+YouTubePlayer.displayName = "YouTubePlayer"
 

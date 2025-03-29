@@ -10,7 +10,7 @@ interface PlaylistStore {
   isLoading: boolean
   error: string | null
   fetchPlaylists: () => Promise<void>
-  fetchPlaylistDetails: (id: string) => Promise<void>
+  fetchPlaylistDetails: (id: string | number) => Promise<void>
   setCurrentSongIndex: (index: number | null) => void
 }
 
@@ -79,15 +79,21 @@ const usePlaylistStore = create<PlaylistStore>((set, get) => ({
     }
   },
 
-  fetchPlaylistDetails: async (id: string) => {
+  fetchPlaylistDetails: async (id: string | number) => {
     set({ isLoading: true, error: null })
     const supabase = createClientSupabaseClient()
 
     try {
+      // Ensure we have a valid numeric ID
+      const numericId = typeof id === 'string' ? parseInt(id, 10) : id
+      if (isNaN(numericId)) {
+        throw new Error('Invalid playlist ID')
+      }
+
       const { data: playlistData, error: playlistError } = await supabase
         .from("playlists")
         .select("*")
-        .eq("id", id)
+        .eq("id", numericId)
         .single()
         .returns<{ id: number; youtube_playlist_id: string; title: string; description: string | null }>()
 

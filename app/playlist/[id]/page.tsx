@@ -13,6 +13,7 @@ import usePlaylistStore from "@/lib/stores/playlist-store"
 import useInteractionStore from "@/lib/stores/interaction-store"
 import { Clock, Music, Share2, Users } from "lucide-react"
 import type { Song } from "@/lib/types"
+import { ErrorBoundary } from "@/components/error-boundary"
 
 interface PageProps {
   params: {
@@ -21,8 +22,12 @@ interface PageProps {
   searchParams: { [key: string]: string | string[] | undefined }
 }
 
-export default function PlaylistPage({ params, searchParams }: PageProps) {
-  const playlistId = params.id
+function PlaylistPageContent({ params }: PageProps) {
+  const playlistId = params?.id
+  if (!playlistId) {
+    throw new Error("Playlist ID is required")
+  }
+
   const { currentPlaylist, songs, currentSongIndex, isLoading, error, fetchPlaylistDetails, setCurrentSongIndex } = usePlaylistStore()
   const { reset } = useInteractionStore()
   const playerRef = useRef<any>(null)
@@ -32,10 +37,17 @@ export default function PlaylistPage({ params, searchParams }: PageProps) {
 
   useEffect(() => {
     const loadPlaylist = async () => {
+      if (!playlistId) return
       await fetchPlaylistDetails(playlistId)
     }
     loadPlaylist()
-    return () => reset()
+    return () => {
+      // Cleanup player on unmount
+      if (playerRef.current?.cancel) {
+        playerRef.current.cancel()
+      }
+      reset()
+    }
   }, [playlistId, fetchPlaylistDetails, reset])
 
   const handlePlaySong = (index: number) => {
@@ -45,16 +57,23 @@ export default function PlaylistPage({ params, searchParams }: PageProps) {
         playerRef.current.togglePlay()
       }
     } else {
-      // If clicking a different song, change to it
-      setCurrentSongIndex(index)
-      setIsPlayerPlaying(true)
-      setIsAutoPlayingNext(false)
+      // If we have a current song playing, cancel it first
+      if (currentSongIndex !== null && playerRef.current?.cancel) {
+        playerRef.current.cancel()
+      }
+      // Small delay to ensure cleanup
+      setTimeout(() => {
+        setCurrentSongIndex(index)
+        setIsPlayerPlaying(true)
+        setIsAutoPlayingNext(false)
+      }, 50)
     }
   }
 
   const handleStopSong = () => {
     if (playerRef.current?.stop) {
       playerRef.current.stop()
+      setIsPlayerPlaying(false)
     }
   }
 
@@ -62,6 +81,7 @@ export default function PlaylistPage({ params, searchParams }: PageProps) {
     if (playerRef.current?.cancel) {
       playerRef.current.cancel()
       setCurrentSongIndex(null)
+      setIsPlayerPlaying(false)
     }
   }
   
@@ -75,15 +95,16 @@ export default function PlaylistPage({ params, searchParams }: PageProps) {
   const handleSongEnded = () => {
     // Check if there's a next song available
     if (currentSongIndex !== null && currentSongIndex < songs.length - 1) {
-      // Set flag to indicate we're auto-transitioning to next song
       setIsAutoPlayingNext(true)
-      // Switch to the next song
-      setCurrentSongIndex(currentSongIndex + 1)
-      // Ensure we're still in playing state
-      setIsPlayerPlaying(true)
+      // Switch to next song with a small delay
+      setTimeout(() => {
+        setCurrentSongIndex(currentSongIndex + 1)
+        setIsPlayerPlaying(true)
+      }, 50)
     } else {
       // If we're at the last song, stop playing
       setIsPlayerPlaying(false)
+      setCurrentSongIndex(null)
     }
   }
 
@@ -310,6 +331,14 @@ export default function PlaylistPage({ params, searchParams }: PageProps) {
       </main>
       <Footer />
     </div>
+  )
+}
+
+export default function PlaylistPage(props: PageProps) {
+  return (
+    <ErrorBoundary>
+      <PlaylistPageContent {...props} />
+    </ErrorBoundary>
   )
 }
 
