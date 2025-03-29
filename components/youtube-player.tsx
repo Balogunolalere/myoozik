@@ -24,6 +24,9 @@ declare global {
   }
 }
 
+// Create a global object to persist paused positions between component renders
+const globalPausedPositions: Record<string, number> = {};
+
 export const YouTubePlayer = forwardRef<{ 
   togglePlay: () => void, 
   stop: () => void,
@@ -47,21 +50,15 @@ export const YouTubePlayer = forwardRef<{
   const [duration, setDuration] = useState(0)
   const [isReady, setIsReady] = useState(false)
   
-  // Store the video's current position when paused
-  const pausedAtRef = useRef<Record<string, number>>({});
+  // For debug purposes
+  const debug = useRef({
+    lastAction: "none",
+    resumePosition: 0
+  });
   
   const playerRef = useRef<HTMLDivElement>(null)
   const timeUpdateInterval = useRef<NodeJS.Timeout | null>(null)
   const playerContainerId = useRef(`youtube-player-${Math.random().toString(36).substring(2, 9)}`)
-
-  // Simple debounce implementation
-  const debounce = useCallback((func: Function, wait: number) => {
-    let timeout: NodeJS.Timeout | null = null;
-    return (...args: any[]) => {
-      if (timeout) clearTimeout(timeout);
-      timeout = setTimeout(() => func(...args), wait);
-    };
-  }, []);
 
   // Expose methods through ref
   useImperativeHandle(ref, () => ({
@@ -72,19 +69,32 @@ export const YouTubePlayer = forwardRef<{
         if (isPlaying) {
           // Save current position when pausing
           const currentPos = player.getCurrentTime() || 0;
-          pausedAtRef.current[videoId] = currentPos;
+          globalPausedPositions[videoId] = currentPos;
+          
+          debug.current.lastAction = "pause";
+          debug.current.resumePosition = currentPos;
+          
+          console.log(`[DEBUG] Paused at ${currentPos} seconds`);
           player.pauseVideo();
         } else {
-          // When resuming, first seek to the stored position
-          const resumePos = pausedAtRef.current[videoId] || 0;
+          // When resuming, seek to the stored position
+          const resumePos = globalPausedPositions[videoId] || 0;
           
-          // Directly seek to the position and play
+          debug.current.lastAction = "resume";
+          debug.current.resumePosition = resumePos;
+          
+          console.log(`[DEBUG] Resuming from ${resumePos} seconds`);
+          
+          // Important: First pause to ensure we can properly seek
+          player.pauseVideo();
+          
+          // Then seek to the saved position and play
           player.seekTo(resumePos, true);
           
-          // Use a very short delay to ensure seeking completes
+          // Small delay to ensure the seek completes before playing
           setTimeout(() => {
             if (player) player.playVideo();
-          }, 10);
+          }, 100);
         }
       } catch (error) {
         console.error("Error toggling play:", error);
@@ -95,7 +105,7 @@ export const YouTubePlayer = forwardRef<{
       
       try {
         // Reset position and pause
-        pausedAtRef.current[videoId] = 0;
+        globalPausedPositions[videoId] = 0;
         player.seekTo(0);
         player.pauseVideo();
         setIsPlaying(false);
@@ -110,7 +120,7 @@ export const YouTubePlayer = forwardRef<{
       
       try {
         // Reset position and fully stop
-        pausedAtRef.current[videoId] = 0;
+        globalPausedPositions[videoId] = 0;
         player.seekTo(0);
         player.stopVideo();
         setIsPlaying(false);
@@ -150,7 +160,6 @@ export const YouTubePlayer = forwardRef<{
     clearTimeUpdateInterval();
     
     if (player && isReady) {
-      // Update less frequently to reduce issues
       timeUpdateInterval.current = setInterval(() => {
         try {
           if (player.getCurrentTime && player.getDuration) {
@@ -158,6 +167,11 @@ export const YouTubePlayer = forwardRef<{
             const dur = player.getDuration() || 0;
             
             setCurrentTime(time);
+            
+            // If playing, continuously update the saved position
+            if (isPlaying) {
+              globalPausedPositions[videoId] = time;
+            }
             
             if (dur > 0 && dur !== Infinity) {
               setDuration(dur);
@@ -168,7 +182,7 @@ export const YouTubePlayer = forwardRef<{
         }
       }, 500);
     }
-  }, [player, isReady, clearTimeUpdateInterval]);
+  }, [player, isReady, isPlaying, videoId, clearTimeUpdateInterval]);
 
   // Initialize YouTube player
   useEffect(() => {
@@ -206,6 +220,13 @@ export const YouTubePlayer = forwardRef<{
                 event.target.mute();
               }
               
+              // If we have a saved position, seek to it
+              const savedPos = globalPausedPositions[videoId] || 0;
+              if (savedPos > 0) {
+                console.log(`[DEBUG] onReady - seeking to saved position: ${savedPos}`);
+                event.target.seekTo(savedPos, true);
+              }
+              
               if (autoplay) {
                 event.target.playVideo();
               }
@@ -221,9 +242,11 @@ export const YouTubePlayer = forwardRef<{
                 startTimeUpdate();
               } 
               else if (event.data === window.YT.PlayerState.PAUSED) {
-                // When paused naturally, save position
-                if (player && player.getCurrentTime) {
-                  pausedAtRef.current[videoId] = player.getCurrentTime() || 0;
+                // When paused naturally (not through our togglePlay), save position
+                if (player && player.getCurrentTime && debug.current.lastAction !== "pause") {
+                  const pos = player.getCurrentTime() || 0;
+                  globalPausedPositions[videoId] = pos;
+                  console.log(`[DEBUG] Natural pause - saving position: ${pos}`);
                 }
                 
                 setIsPlaying(false);
@@ -231,7 +254,7 @@ export const YouTubePlayer = forwardRef<{
                 startTimeUpdate();
               } 
               else if (event.data === window.YT.PlayerState.ENDED) {
-                pausedAtRef.current[videoId] = 0;
+                globalPausedPositions[videoId] = 0;
                 setIsPlaying(false);
                 onPlayStateChange?.(false);
                 clearTimeUpdateInterval();
@@ -263,54 +286,148 @@ export const YouTubePlayer = forwardRef<{
       initPlayer();
     }
     
+    // Enable background playback
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.setActionHandler('play', () => {
+        if (player && isReady && !isPlaying) {
+          player.playVideo();
+        }
+      });
+      
+      navigator.mediaSession.setActionHandler('pause', () => {
+        if (player && isReady && isPlaying) {
+          const currentPos = player.getCurrentTime() || 0;
+          globalPausedPositions[videoId] = currentPos;
+          player.pauseVideo();
+        }
+      });
+      
+      navigator.mediaSession.setActionHandler('stop', () => {
+        if (player && isReady) {
+          globalPausedPositions[videoId] = 0;
+          player.stopVideo();
+        }
+      });
+      
+      navigator.mediaSession.setActionHandler('previoustrack', () => {
+        if (onPrevious && hasPrevious) onPrevious();
+      });
+      
+      navigator.mediaSession.setActionHandler('nexttrack', () => {
+        if (onNext && hasNext) onNext();
+      });
+    }
+    
+    // Add wake lock for background playback when screen is off
+    const enableWakeLock = async () => {
+      try {
+        if ('wakeLock' in navigator) {
+          // @ts-ignore - WakeLock API may not be recognized by TypeScript
+          const wakeLock = await navigator.wakeLock.request('screen');
+          console.log('Wake Lock is active');
+          
+          // Release wake lock when component unmounts
+          return () => {
+            wakeLock.release()
+              .then(() => console.log('Wake Lock released'))
+              .catch((err) => console.error('Error releasing Wake Lock:', err));
+          };
+        }
+      } catch (err) {
+        console.error('Wake Lock error:', err);
+      }
+    };
+    
+    // Only attempt to enable wake lock when playing
+    let wakeLockRelease: (() => void) | undefined;
+    if (isPlaying) {
+      enableWakeLock().then(release => {
+        wakeLockRelease = release;
+      });
+    }
+    
     return () => {
       isMounted = false;
       clearTimeUpdateInterval();
       
+      // Release wake lock if active
+      if (wakeLockRelease) {
+        wakeLockRelease();
+      }
+      
       if (player) {
         try {
+          // Save final position before unmounting
+          if (isReady && player.getCurrentTime) {
+            const finalPos = player.getCurrentTime() || 0;
+            globalPausedPositions[videoId] = finalPos;
+            console.log(`[DEBUG] Component unmounting - saving position: ${finalPos}`);
+          }
           player.destroy();
         } catch (error) {
           console.error("Error destroying player:", error);
         }
       }
     };
-  }, []);
+  }, [isPlaying, onNext, onPrevious, hasNext, hasPrevious, videoId, autoplay, isMuted, startTimeUpdate]);
 
   // Handle video ID changes
   useEffect(() => {
     if (!player || !isReady || !videoId) return;
     
     try {
+      console.log(`[DEBUG] videoId changed to ${videoId}`);
+      
       // Preserve current play state
       const wasPlaying = isPlaying;
       
       // Get any saved position for this video
-      const resumePos = pausedAtRef.current[videoId] || 0;
+      const resumePos = globalPausedPositions[videoId] || 0;
+      console.log(`[DEBUG] videoId change - resume position: ${resumePos}`);
       
-      // Load new video
-      player.loadVideoById({
+      // First pause and load the video without autoplay
+      player.cueVideoById({
         videoId: videoId,
         startSeconds: resumePos
       });
       
-      // If we weren't playing, pause immediately after loading
-      if (!wasPlaying) {
-        setTimeout(() => {
-          if (player) player.pauseVideo();
-        }, 10);
-      }
-      
-      // Apply current mute state
-      if (isMuted) {
-        player.mute();
-      } else {
-        player.unMute();
-      }
+      // Then seek to ensure position and play if needed
+      setTimeout(() => {
+        if (!player) return;
+        
+        // Ensure position
+        player.seekTo(resumePos, true);
+        
+        // Restore play state
+        if (wasPlaying) {
+          player.playVideo();
+        }
+        
+        // Apply mute state
+        if (isMuted) {
+          player.mute();
+        } else {
+          player.unMute();
+        }
+      }, 100);
     } catch (error) {
-      console.error("Error loading video:", error);
+      console.error("Error changing video:", error);
     }
-  }, [videoId, isReady, player]);
+  }, [videoId, isReady, player, isPlaying, isMuted]);
+
+  // Set media metadata for background playback
+  useEffect(() => {
+    if ('mediaSession' in navigator && videoId) {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: 'Playing Music',
+        artist: 'Myoozik Player',
+        album: 'Playlist',
+        artwork: [
+          { src: `/api/youtube/video/thumbnail/${videoId}`, sizes: '512x512', type: 'image/png' }
+        ]
+      });
+    }
+  }, [videoId]);
 
   return (
     <div style={{ display: 'none' }} className="plyr-youtube">

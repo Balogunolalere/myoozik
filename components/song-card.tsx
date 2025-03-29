@@ -221,7 +221,7 @@ export function SongCard({
 
         {/* Vinyl/Control Area */}
         <div className="relative flex-shrink-0 w-[60px] h-[60px] sm:w-[100px] sm:h-[100px]">
-          {/* Vinyl Disc */}
+          {/* Vinyl Disc - This will now spin properly when a song is playing */}
           <motion.div 
             className="absolute inset-0"
             style={{
@@ -229,8 +229,13 @@ export function SongCard({
               borderRadius: '50%',
               border: '4px sm:8px solid #222',
             }}
-            animate={{ rotate: localPlayState ? 360 : 0 }} // Animate based on localPlayState
-            transition={{ duration: 2, repeat: localPlayState ? Infinity : 0, ease: "linear" }}
+            animate={{ rotate: isPlaying ? 360 : 0 }} 
+            transition={{ 
+              duration: 2, 
+              repeat: isPlaying ? Infinity : 0, 
+              ease: "linear",
+              repeatDelay: 0
+            }}
           >
             {/* Vinyl grooves */}
             {Array.from({ length: 5 }).map((_, i) => (
